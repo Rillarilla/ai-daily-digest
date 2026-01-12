@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Daily Digest - {{ date }}</title>
+    <style>
+        /* Reset and base styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header .date {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        /* Highlights section */
+        .highlights {
+            background: linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%);
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .highlights h2 {
+            color: #4f46e5;
+            font-size: 18px;
+            margin: 0 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .highlights-content {
+            font-size: 15px;
+            color: #374151;
+            white-space: pre-line;
+        }
+
+        /* Category sections */
+        .category {
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .category:last-child {
+            border-bottom: none;
+        }
+
+        .category-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-header .count {
+            background: #e5e7eb;
+            color: #6b7280;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        /* News items */
+        .news-item {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .news-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .news-title {
+            margin: 0 0 6px 0;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .news-title a {
+            color: #1f2937;
+            text-decoration: none;
+        }
+
+        .news-title a:hover {
+            color: #4f46e5;
+        }
+
+        .news-meta {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .news-source {
+            color: #4f46e5;
+            font-weight: 500;
+        }
+
+        .news-summary {
+            font-size: 14px;
+            color: #4b5563;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Tags */
+        .tags {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            background: #f3f4f6;
+            color: #6b7280;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Paper specific styling */
+        .paper-item .news-title a {
+            color: #059669;
+        }
+
+        .paper-item .news-title a:hover {
+            color: #047857;
+        }
+
+        .paper-authors {
+            font-size: 13px;
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        /* Footer */
+        .footer {
+            background: #f9fafb;
+            padding: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .footer a {
+            color: #4f46e5;
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header {
+                padding: 24px 16px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            .category, .highlights {
+                padding: 20px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 AI Daily Digest</h1>
+            <div class="date">{{ date }} · {{ item_count }} 条资讯</div>
+        </div>
+
+        <!-- Highlights -->
+        {% if highlights %}
+        <div class="highlights">
+            <h2>⚡ 今日要点</h2>
+            <div class="highlights-content">{{ highlights }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Categories -->
+        {% for category_id, items in categories.items() %}
+        <div class="category">
+            <h2 class="category-header">
+                {{ category_names.get(category_id, category_id) }}
+                <span class="count">{{ items|length }}</span>
+            </h2>
+
+            {% for item in items %}
+            <div class="news-item {% if category_id == 'papers' %}paper-item{% endif %}">
+                <h3 class="news-title">
+                    <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">{{ item.source }}</span>
+                    {% if item.published %}
+                    <span class="news-date">{{ item.published.strftime('%m-%d %H:%M') }}</span>
+                    {% endif %}
+                    {% if item.author and category_id == 'papers' %}
+                    <span class="paper-authors">{{ item.author }}</span>
+                    {% endif %}
+                </div>
+                {% if item.summary %}
+                <p class="news-summary">{{ item.summary }}</p>
+                {% endif %}
+                {% if item.tags %}
+                <div class="tags">
+                    {% for tag in item.tags[:3] %}
+                    <span class="tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                由 <strong>AI Daily Digest</strong> 自动生成<br>
+                数据来源：RSS feeds, arXiv, Hacker News, X/Twitter<br>
+                <a href="https://github.com">管理订阅</a> ·
+                <a href="mailto:rillahai@gmail.com?subject=Feedback">反馈建议</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Daily Digest - 2026年01月12日</title>
+    <style>
+        /* Reset and base styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header .date {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        /* Highlights section */
+        .highlights {
+            background: linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%);
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .highlights h2 {
+            color: #4f46e5;
+            font-size: 18px;
+            margin: 0 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .highlights-content {
+            font-size: 15px;
+            color: #374151;
+            white-space: pre-line;
+        }
+
+        /* Category sections */
+        .category {
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .category:last-child {
+            border-bottom: none;
+        }
+
+        .category-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-header .count {
+            background: #e5e7eb;
+            color: #6b7280;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        /* News items */
+        .news-item {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .news-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .news-title {
+            margin: 0 0 6px 0;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .news-title a {
+            color: #1f2937;
+            text-decoration: none;
+        }
+
+        .news-title a:hover {
+            color: #4f46e5;
+        }
+
+        .news-meta {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .news-source {
+            color: #4f46e5;
+            font-weight: 500;
+        }
+
+        .news-summary {
+            font-size: 14px;
+            color: #4b5563;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Tags */
+        .tags {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            background: #f3f4f6;
+            color: #6b7280;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Paper specific styling */
+        .paper-item .news-title a {
+            color: #059669;
+        }
+
+        .paper-item .news-title a:hover {
+            color: #047857;
+        }
+
+        .paper-authors {
+            font-size: 13px;
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        /* Footer */
+        .footer {
+            background: #f9fafb;
+            padding: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .footer a {
+            color: #4f46e5;
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header {
+                padding: 24px 16px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            .category, .highlights {
+                padding: 20px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 AI Daily Digest</h1>
+            <div class="date">2026年01月12日 · 16 条资讯</div>
+        </div>
+
+        <!-- Highlights -->
+        
+        <div class="highlights">
+            <h2>⚡ 今日要点</h2>
+            <div class="highlights-content">1. TechCrunch 报道 Motional 将在2025年于拉斯维加斯推出无人驾驶 robotaxi 服务，重心转向 AI 驱动的技术架构
+2. Google 针对特定医疗查询移除了 AI Overviews 功能，此前被曝出提供误导性健康信息
+3. arXiv 最新论文聚焦图神经网络训练和大模型集成解码技术
+4. 36氪：智谱单日涨幅超31%，国内大模型概念股活跃
+5. 印度信实工业宣布776亿美元投资计划，将建设印度最大 AI 数据中心</div>
+        </div>
+        
+
+        <!-- Categories -->
+        
+        <div class="category">
+            <h2 class="category-header">
+                🇨🇳 国内动态
+                <span class="count">5</span>
+            </h2>
+
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://36kr.com/newsflashes/3636191451759616?f=rss" target="_blank">信实工业承诺在古吉拉特邦投资近776亿美元，将建印度最大AI就绪型数据中心</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">36氪 AI</span>
+                    
+                    <span class="news-date">01-12 08:45</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">印度信实工业董事长穆克什·安巴尼当地时间1月11日表示，未来五年，该公司在印度古吉拉特邦投资规模将翻番至7万亿卢比（约合776亿美元）。安巴尼另外透露，信实工业正在古吉拉特邦贾姆讷格尔建设“印度最大的人工智能就绪型数据中心”。（财联社）</p>
+                
+                
+            </div>
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://36kr.com/newsflashes/3636158879695874?f=rss" target="_blank">恒指收涨1.44%，智谱涨超31%</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">36氪 AI</span>
+                    
+                    <span class="news-date">01-12 08:12</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">36氪获悉，恒指收涨1.44%，恒生科技指数涨3.1%；科网股走强，美团涨超6%，百度集团、阿里巴巴涨超5%；大模型概念股活跃，智谱涨超31%，MINIMAX涨超15%；消费、传媒、零售股领涨，阿里健康、阅文集团涨超10%，东方甄选涨超9%；电气设备、国防军工、家电股跌幅居前，高科桥跌超28%，西锐跌超5%，美的集团跌超2%；南向资金净买入73.06亿港元。</p>
+                
+                
+            </div>
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://36kr.com/p/3632116618937351?f=rss" target="_blank">何小鹏：未来最好的AI公司，都会自研芯片</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">36氪 AI</span>
+                    
+                    <span class="news-date">01-12 07:07</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">小鹏汽车董事长、CEO何小鹏 文｜肖漫 编辑｜李勤 除了在发布会上一遍遍强调自己是 AI 公司，小鹏在新业务进展上也越来越像一家 AI 公司。 2026年1月8日，小鹏发布小鹏P7+、小鹏G7增程版、2026款小鹏G6、2026款小鹏G9四款新车，但这些车型最重要的技术更新并非硬件配置，而是芯片和 AI——这四款新车都会用上小鹏自研的图灵 AI 芯片，Ultra SE和Ultra 版本车型搭载小鹏的第二代 VLA 模型，能实现初阶 L4 的辅助驾驶能力。 小鹏的做法与近几年的特斯拉极为相似。马斯克已将特斯拉从汽车公司塑造为 AI 公司，虽然特斯拉绝大部分收入还要靠卖车，但特斯拉已不再大幅改动车型硬件配置，且多年未推出全新车型，转而提升车的 AI 能力。 他们都看到汽车上即将发生的下一阶段的变化。何小鹏说，过去 10 年，汽车硬件占整辆车价值超过 90%，但未来十年，硬件价值会缩减到 50%，软件会从10%暴增到 50%。 因此，小鹏不仅要做模型和操作系统，还要做芯片上的软件。何小鹏认为，未来全球最好的 AI 公司都会选择自己定制芯片，这会决定每家公司 AI 产品的性能上限。 在小鹏推出</p>
+                
+                
+            </div>
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://36kr.com/p/3636077116949511?f=rss" target="_blank">科氪 | 荣耀ROBOT PHONE亮相2026 CES，以颠覆性设计斩获多项顶级大奖</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">36氪 AI</span>
+                    
+                    <span class="news-date">01-12 06:49</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">2026年1月6日至9日，国际消费电子展(CES2026)在美国拉斯维加斯盛大举行。荣耀向世界展示了全球第一款“手机机器人”——荣耀ROBOT PHONE。这款融合了前沿AI与机器人技术的颠覆性产品，一经亮相就凭借其突破性的手机机器人云台架构与AI交互体验成功突围，一举囊括CNET、Android Police、GadgetFlow以及Geekspin等多家全球顶级科技媒体的年度大奖以及点赞报道。作为荣耀“阿尔法战略”的关键落子，荣耀ROBOT PHONE的推出，证明了荣耀已具备定义未来产品品类的技术领导力。 官方图片 荣耀ROBOT PHONE的亮相，彻底打破了传统手机与智能硬件的边界，开创了“手机机器人”这一全新品类，为用户带来了从“人操作设备”到“设备主动服务人”的革命性体验。该产品的亮相迅速成为CES现场与全球科技媒体的焦点，CNET盛赞荣耀ROBOT PHONE为“最具未来感科技（Most Futuristic Tech）”，并称这是“近年来见过的最不按常理出牌的酷炫设计”；Android Police肯定了荣耀ROBOT PHONE在AI终端形态创新上的大胆尝试，授予其“B</p>
+                
+                
+            </div>
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://36kr.com/p/3635969762657287?f=rss" target="_blank">实现卫星互联网“工业母机”交付，这家公司获超千万元天使轮融资｜硬氪首发</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">36氪 AI</span>
+                    
+                    <span class="news-date">01-12 05:01</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">作者&nbsp;|&nbsp;乔钰杰 编辑&nbsp;|&nbsp;袁斯来 硬氪获悉，象控科技（上海）有限公司日前完成超千万元天使轮融资，由六禾创投独家投资。我们总结了本轮融资信息和该公司几大亮点： &nbsp; 融资情况 融资轮次：天使轮 融资金额：超千万元 投资机构：六禾创投 基金用途：加大研发力度，推进研发进程，扩充研发团队规模 &nbsp; 公司基本信息 成立时间：2024年 总部地址：上海浦东 技术亮点：公司核心产品聚焦低轨卫星通信、5G/6G及专用通信领域，涵盖科研级原型验证设备、高性能通用信道模拟器以及相控阵终端等关键产品形态。 其中，公司重点布局服务于卫星互联网底层技术研发的仿真、验证与原型系统，为通信体制及系统架构提供工程化验证能力。在用户终端方面，公司选择技术门槛更高、长期演进空间更大的数字相控阵技术路线，更适配未来卫星互联网的规模化应用与系统升级需求。 &nbsp; 市场分析 在全球数字基础设施升级和6G前沿研究加速的背景下，卫星互联网正从传统专用通信体系，向与地面移动通信深度融合的方向演进。低轨卫星凭借低时延、高容量和全球覆盖能力，正在成为未来立体通信网络的重要</p>
+                
+                
+            </div>
+            
+        </div>
+        
+        <div class="category">
+            <h2 class="category-header">
+                💰 行业投融资
+                <span class="count">5</span>
+            </h2>
+
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://techcrunch.com/2026/01/11/motional-puts-ai-at-center-of-robotaxi-reboot-as-it-targets-2026-for-driverless-service/" target="_blank">Motional puts AI at center of robotaxi reboot as it targets 2026 for driverless service</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">TechCrunch AI</span>
+                    
+                    <span class="news-date">01-12 00:10</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">Motional says it will launch a driverless robotaxi service in Las Vegas before the end of 2026.</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">AI</span>
+                    
+                    <span class="tag">Transportation</span>
+                    
+                    <span class="tag">autonomous vehicles</span>
+                    
+                </div>
+                
+            </div>
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://techcrunch.com/2026/01/11/google-removes-ai-overviews-for-certain-medical-queries/" target="_blank">Google removes AI Overviews for certain medical queries</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">TechCrunch AI</span>
+                    
+                    <span class="news-date">01-11 17:56</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">This follows an investigation by the Guardian that found Google AI Overviews offering misleading information in response to some health-related queries.</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">AI</span>
+                    
+                    <span class="tag">ai overviews</span>
+                    
+                    <span class="tag">Google</span>
+                    
+                </div>
+                
+            </div>
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://techcrunch.com/2026/01/11/indonesia-blocks-grok-over-non-consensual-sexualized-deepfakes/" target="_blank">Indonesia and Malaysia block Grok over non-consensual, sexualized deepfakes</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">TechCrunch AI</span>
+                    
+                    <span class="news-date">01-11 15:07</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">Indonesian officials said Saturday that they are temporarily blocking access to xAI’s chatbot Grok.</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">AI</span>
+                    
+                    <span class="tag">Government & Policy</span>
+                    
+                    <span class="tag">Social</span>
+                    
+                </div>
+                
+            </div>
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://techcrunch.com/2026/01/11/google-announces-a-new-protocol-to-facilitate-commerce-using-ai-agents/" target="_blank">Google announces a new protocol to facilitate commerce using AI agents</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">TechCrunch AI</span>
+                    
+                    <span class="news-date">01-11 15:00</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">Google said that merchants can now offer discounts to users directly in AI mode results</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">AI</span>
+                    
+                    <span class="tag">Commerce</span>
+                    
+                    <span class="tag">AI shopping</span>
+                    
+                </div>
+                
+            </div>
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://techcrunch.com/2026/01/10/openai-is-reportedly-asking-contractors-to-upload-real-work-from-past-jobs/" target="_blank">OpenAI is reportedly asking contractors to upload real work from past jobs</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">TechCrunch AI</span>
+                    
+                    <span class="news-date">01-10 21:18</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">An intellectual property lawyer says OpenAI is "putting itself at great risk" with this approach.</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">AI</span>
+                    
+                    <span class="tag">handshake ai</span>
+                    
+                    <span class="tag">OpenAI</span>
+                    
+                </div>
+                
+            </div>
+            
+        </div>
+        
+        <div class="category">
+            <h2 class="category-header">
+                📄 前沿论文
+                <span class="count">5</span>
+            </h2>
+
+            
+            <div class="news-item paper-item">
+                <h3 class="news-title">
+                    <a href="https://arxiv.org/abs/2601.06025v1" target="_blank">Manifold limit for the training of shallow graph convolutional neural networks</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">arXiv</span>
+                    
+                    <span class="news-date">01-09 18:59</span>
+                    
+                    
+                    <span class="paper-authors">Johanna Tengler, Christoph Brune, José A. Iglesias</span>
+                    
+                </div>
+                
+                <p class="news-summary">We study the discrete-to-continuum consistency of the training of shallow graph convolutional neural networks (GCNNs) on proximity graphs of sampled point clouds under a manifold assumption. Graph convolution is defined spectrally via the graph Laplacian, whose low-frequency spectrum approximates that of the Laplace-Beltrami operator of the underlying smooth manifold, and shallow GCNNs of possibly infinite width are linear functionals on the space of measures on the parameter space. From this fu</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">stat.ML</span>
+                    
+                    <span class="tag">cs.LG</span>
+                    
+                    <span class="tag">math.FA</span>
+                    
+                </div>
+                
+            </div>
+            
+            <div class="news-item paper-item">
+                <h3 class="news-title">
+                    <a href="https://arxiv.org/abs/2601.06022v1" target="_blank">AdaFuse: Adaptive Ensemble Decoding with Test-Time Scaling for LLMs</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">arXiv</span>
+                    
+                    <span class="news-date">01-09 18:58</span>
+                    
+                    
+                    <span class="paper-authors">Chengming Cui, Tianxin Wei, Ziyi Chen et al. (9 authors)</span>
+                    
+                </div>
+                
+                <p class="news-summary">Large language models (LLMs) exhibit complementary strengths arising from differences in pretraining data, model architectures, and decoding behaviors. Inference-time ensembling provides a practical way to combine these capabilities without retraining. However, existing ensemble approaches suffer from fundamental limitations. Most rely on fixed fusion granularity, which lacks the flexibility required for mid-generation adaptation and fails to adapt to different generation characteristics across </p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">cs.CL</span>
+                    
+                    <span class="tag">cs.AI</span>
+                    
+                </div>
+                
+            </div>
+            
+            <div class="news-item paper-item">
+                <h3 class="news-title">
+                    <a href="https://arxiv.org/abs/2601.06021v1" target="_blank">Chaining the Evidence: Robust Reinforcement Learning for Deep Search Agents with Citation-Aware Rubric Rewards</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">arXiv</span>
+                    
+                    <span class="news-date">01-09 18:57</span>
+                    
+                    
+                    <span class="paper-authors">Jiajie Zhang, Xin Lv, Ling Feng et al. (5 authors)</span>
+                    
+                </div>
+                
+                <p class="news-summary">Reinforcement learning (RL) has emerged as a critical technique for enhancing LLM-based deep search agents. However, existing approaches primarily rely on binary outcome rewards, which fail to capture the comprehensiveness and factuality of agents' reasoning process, and often lead to undesirable behaviors such as shortcut exploitation and hallucinations. To address these limitations, we propose \textbf{Citation-aware Rubric Rewards (CaRR)}, a fine-grained reward framework for deep search agents</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">cs.CL</span>
+                    
+                </div>
+                
+            </div>
+            
+            <div class="news-item paper-item">
+                <h3 class="news-title">
+                    <a href="https://arxiv.org/abs/2601.06016v1" target="_blank">LookAroundNet: Extending Temporal Context with Transformers for Clinically Viable EEG Seizure Detection</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">arXiv</span>
+                    
+                    <span class="news-date">01-09 18:52</span>
+                    
+                    
+                    <span class="paper-authors">Þór Sverrisson, Steinn Guðmundsson</span>
+                    
+                </div>
+                
+                <p class="news-summary">Automated seizure detection from electroencephalography (EEG) remains difficult due to the large variability of seizure dynamics across patients, recording conditions, and clinical settings. We introduce LookAroundNet, a transformer-based seizure detector that uses a wider temporal window of EEG data to model seizure activity. The seizure detector incorporates EEG signals before and after the segment of interest, reflecting how clinicians use surrounding context when interpreting EEG recordings.</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">cs.LG</span>
+                    
+                </div>
+                
+            </div>
+            
+            <div class="news-item paper-item">
+                <h3 class="news-title">
+                    <a href="https://arxiv.org/abs/2601.06009v1" target="_blank">Detecting Stochasticity in Discrete Signals via Nonparametric Excursion Theorem</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">arXiv</span>
+                    
+                    <span class="news-date">01-09 18:47</span>
+                    
+                    
+                    <span class="paper-authors">Sunia Tanweer, Firas A. Khasawneh</span>
+                    
+                </div>
+                
+                <p class="news-summary">We develop a practical framework for distinguishing diffusive stochastic processes from deterministic signals using only a single discrete time series. Our approach is based on classical excursion and crossing theorems for continuous semimartingales, which correlates number $N_\varepsilon$ of excursions of magnitude at least $\varepsilon$ with the quadratic variation $[X]_T$ of the process. The scaling law holds universally for all continuous semimartingales with finite quadratic variation, incl</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">stat.ML</span>
+                    
+                    <span class="tag">cs.LG</span>
+                    
+                    <span class="tag">eess.SP</span>
+                    
+                </div>
+                
+            </div>
+            
+        </div>
+        
+        <div class="category">
+            <h2 class="category-header">
+                🏢 大厂动态
+                <span class="count">1</span>
+            </h2>
+
+            
+            <div class="news-item ">
+                <h3 class="news-title">
+                    <a href="https://www.apple.com/newsroom/2026/01/spectrum-front-row-tips-off-january-9-on-apple-vision-pro/" target="_blank">Spectrum Front Row tips off January 9 on Apple Vision Pro</a>
+                </h3>
+                <div class="news-meta">
+                    <span class="news-source">Apple Newsroom</span>
+                    
+                    <span class="news-date">01-05 17:00</span>
+                    
+                    
+                </div>
+                
+                <p class="news-summary">Apple and Spectrum unveiled the schedule for The Lakers in Apple Immersive, a series of live basketball games in a revolutionary storytelling format available only on Apple Vision Pro.</p>
+                
+                
+                <div class="tags">
+                    
+                    <span class="tag">UPDATE</span>
+                    
+                </div>
+                
+            </div>
+            
+        </div>
+        
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                由 <strong>AI Daily Digest</strong> 自动生成<br>
+                数据来源：RSS feeds, arXiv, Hacker News, X/Twitter<br>
+                <a href="https://github.com">管理订阅</a> ·
+                <a href="mailto:rillahai@gmail.com?subject=Feedback">反馈建议</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

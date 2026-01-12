@@ -1,0 +1,212 @@
+# AI Daily Digest - 数据源配置
+# 可以随时添加/删除/修改数据源
+
+# RSS 数据源
+rss_sources:
+  # === 大厂动态 ===
+  apple:
+    name: "Apple Newsroom"
+    url: "https://www.apple.com/newsroom/rss-feed.rss"
+    category: "big_tech"
+    keywords: ["AI", "intelligence", "machine learning", "Siri", "neural"]
+    max_items: 10
+    enabled: true
+
+  google_ai:
+    name: "Google AI Blog"
+    url: "https://blog.google/technology/ai/rss/"
+    category: "big_tech"
+    keywords: []  # 空表示全部接收
+    max_items: 10
+    enabled: true
+
+  deepmind:
+    name: "DeepMind Blog"
+    url: "https://deepmind.google/blog/rss.xml"
+    category: "big_tech"
+    keywords: []
+    max_items: 10
+    enabled: true
+
+  openai:
+    name: "OpenAI Blog"
+    url: "https://openai.com/blog/rss/"
+    category: "big_tech"
+    keywords: []
+    max_items: 10
+    enabled: false  # 403 blocked, disabled
+
+  anthropic:
+    name: "Anthropic News"
+    url: "https://www.anthropic.com/rss.xml"
+    category: "big_tech"
+    keywords: []
+    max_items: 10
+    enabled: false  # 404, disabled
+
+  # === 投融资 & 行业新闻 ===
+  techcrunch_ai:
+    name: "TechCrunch AI"
+    url: "https://techcrunch.com/category/artificial-intelligence/feed/"
+    category: "industry"
+    keywords: []  # Accept all AI news, not just funding
+    max_items: 15
+    enabled: true
+
+  venturebeat_ai:
+    name: "VentureBeat AI"
+    url: "https://venturebeat.com/category/ai/feed/"
+    category: "industry"
+    keywords: []
+    max_items: 10
+    enabled: true
+
+  # === 中文科技媒体 ===
+  36kr_ai:
+    name: "36氪 AI"
+    url: "https://36kr.com/feed"
+    category: "china"
+    keywords: ["AI", "人工智能", "大模型", "融资", "智能"]
+    max_items: 10
+    enabled: true
+
+  jiqizhixin:
+    name: "机器之心"
+    url: "https://www.jiqizhixin.com/rss"
+    category: "china"
+    keywords: []
+    max_items: 10
+    enabled: true
+
+  # === Newsletter & 深度分析 ===
+  a16z:
+    name: "a16z"
+    url: "https://a16z.com/feed/"
+    category: "industry"
+    keywords: ["AI", "artificial intelligence", "LLM", "machine learning", "AGI", "model"]
+    max_items: 10
+    enabled: false  # RSS 不可用，需要手动查找正确地址
+
+  latent_space_newsletter:
+    name: "Latent Space"
+    url: "https://www.latent.space/feed"
+    category: "newsletter"
+    keywords: []
+    max_items: 10
+    enabled: true
+
+  last_week_in_ai:
+    name: "Last Week in AI"
+    url: "https://lastweekin.ai/feed"
+    category: "newsletter"
+    keywords: []
+    max_items: 10
+    enabled: true
+
+  bens_bites:
+    name: "Ben's Bites"
+    url: "https://www.bensbites.com/feed"
+    category: "newsletter"
+    keywords: []
+    max_items: 10
+    enabled: true
+
+  # === Podcasts ===
+  no_priors:
+    name: "No Priors"
+    url: "https://anchor.fm/s/f01a4358/podcast/rss"
+    category: "podcast"
+    keywords: []
+    max_items: 5
+    enabled: false  # RSS 不可用，需要手动查找正确地址
+
+  latent_space_podcast:
+    name: "Latent Space Podcast"
+    url: "https://api.substack.com/feed/podcast/1084089.rss"
+    category: "podcast"
+    keywords: []
+    max_items: 5
+    enabled: true
+
+  twiml_ai:
+    name: "TWIML AI Podcast"
+    url: "https://feeds.megaphone.fm/MLN2155636147"
+    category: "podcast"
+    keywords: []
+    max_items: 5
+    enabled: true
+
+# arXiv 论文配置
+arxiv:
+  enabled: true
+  categories:
+    - "cs.AI"   # Artificial Intelligence
+    - "cs.LG"   # Machine Learning
+    - "cs.CL"   # Computation and Language (NLP)
+    - "cs.CV"   # Computer Vision
+  max_results: 20
+  # 按热度过滤 (可选)
+  min_score: 0  # 0表示不过滤
+
+# X/Twitter 替代方案配置
+twitter:
+  enabled: true
+  method: "nitter"  # nitter | rss_bridge | manual
+
+  # 关注的账号 (通过 Nitter RSS)
+  accounts:
+    - username: "ylecun"
+      name: "Yann LeCun"
+    - username: "kaborashid"
+      name: "Kaif Rashid"
+    - username: "sama"
+      name: "Sam Altman"
+    - username: "demaboris"
+      name: "Andrej Karpathy"
+    - username: "JeffDean"
+      name: "Jeff Dean"
+
+  # 搜索关键词 (如果 Nitter 支持)
+  search_terms:
+    - "AI breakthrough"
+    - "LLM"
+    - "GPT"
+    - "Claude"
+
+  # Nitter 实例列表 (会自动尝试可用的)
+  nitter_instances:
+    - "https://nitter.privacydev.net"
+    - "https://nitter.poast.org"
+    - "https://nitter.1d4.us"
+
+# Hacker News 热门 AI 讨论
+hackernews:
+  enabled: true
+  url: "https://hnrss.org/newest?q=AI+OR+LLM+OR+GPT+OR+Claude"
+  min_points: 10  # Lower threshold to get more results
+  max_items: 10
+
+# 输出配置
+output:
+  # 每个分类最多显示多少条
+  max_per_category: 5
+
+  # 分类显示顺序
+  category_order:
+    - "big_tech"
+    - "papers"
+    - "newsletter"
+    - "industry"
+    - "podcast"
+    - "social"
+    - "china"
+
+  # 分类中文名
+  category_names:
+    big_tech: "🏢 大厂动态"
+    papers: "📄 前沿论文"
+    newsletter: "📬 Newsletter精选"
+    industry: "💰 行业投融资"
+    podcast: "🎙️ 播客更新"
+    social: "🐦 社交热议"
+    china: "🇨🇳 国内动态"
