@@ -1,21 +1,22 @@
 """
-Claude-based summarizer for news items.
+Gemini-based summarizer for news items.
 """
 
 import os
 from typing import Optional
-import anthropic
+import google.generativeai as genai
 from collectors.base import NewsItem
 
 
-class ClaudeSummarizer:
-    """Use Claude to summarize and highlight key news."""
+class GeminiSummarizer:
+    """Use Gemini to summarize and highlight key news."""
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         if not self.api_key:
-            raise ValueError("ANTHROPIC_API_KEY not set")
-        self.client = anthropic.Anthropic(api_key=self.api_key)
+            raise ValueError("GEMINI_API_KEY not set")
+        genai.configure(api_key=self.api_key)
+        self.model = genai.GenerativeModel("gemini-2.0-flash")
 
     def summarize_item(self, item: NewsItem) -> str:
         """Generate a concise summary for a single news item."""
@@ -35,12 +36,8 @@ class ClaudeSummarizer:
 - 不要说"这篇文章讲述了..."这类开头"""
 
         try:
-            response = self.client.messages.create(
-                model="claude-3-5-haiku-latest",
-                max_tokens=200,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            return response.content[0].text.strip()
+            response = self.model.generate_content(prompt)
+            return response.text.strip()
         except Exception as e:
             print(f"Summarize error: {e}")
             return item.summary or ""
@@ -52,7 +49,7 @@ class ClaudeSummarizer:
     ) -> str:
         """Generate overall daily highlights summary."""
 
-        # Prepare content for Claude
+        # Prepare content for Gemini
         content_parts = []
         for category, items in items_by_category.items():
             cat_name = category_names.get(category, category)
@@ -76,12 +73,8 @@ class ClaudeSummarizer:
 6. 风格：专业但易读，像给同事的早间简报"""
 
         try:
-            response = self.client.messages.create(
-                model="claude-3-5-haiku-latest",
-                max_tokens=500,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            return response.content[0].text.strip()
+            response = self.model.generate_content(prompt)
+            return response.text.strip()
         except Exception as e:
             print(f"Highlights error: {e}")
             return "今日AI动态收集完成，请查看下方详情。"
@@ -97,3 +90,7 @@ class ClaudeSummarizer:
             if not item.summary or len(item.summary) > 300:
                 item.summary = self.summarize_item(item)
         return items
+
+
+# Alias for backward compatibility
+ClaudeSummarizer = GeminiSummarizer

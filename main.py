@@ -97,9 +97,9 @@ def main():
     total_items = sum(len(items) for items in categories.values())
     print(f"   After processing: {total_items} items in {len(categories)} categories\n")
 
-    # Generate summaries with Claude
+    # Generate summaries with Gemini
     highlights = ""
-    if os.environ.get("ANTHROPIC_API_KEY"):
+    if os.environ.get("GEMINI_API_KEY"):
         print("🧠 Generating AI summaries...")
         try:
             summarizer = ClaudeSummarizer()
@@ -108,7 +108,7 @@ def main():
         except Exception as e:
             print(f"   Summarizer error: {e}\n")
     else:
-        print("⚠️  ANTHROPIC_API_KEY not set, skipping AI summaries\n")
+        print("⚠️  GEMINI_API_KEY not set, skipping AI summaries\n")
 
     # Send email
     to_email = os.environ.get("TO_EMAIL", "rillahai@gmail.com")

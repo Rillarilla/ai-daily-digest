@@ -29,8 +29,8 @@ jobs:
 
       - name: Run AI Daily Digest
         env:
-          # Claude API for summaries
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Gemini API for summaries
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
           # Email configuration (Gmail SMTP)
           SMTP_SERVER: smtp.gmail.com
