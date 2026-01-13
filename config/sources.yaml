@@ -66,7 +66,7 @@ rss_sources:
     name: "36氪 AI"
     url: "https://36kr.com/feed"
     category: "china"
-    keywords: ["AI", "人工智能", "大模型", "融资", "智能"]
+    keywords: ["AI融资", "人工智能融资", "大模型融资", "AI投资", "人工智能投资", "大模型", "GPT", "智能体", "AIGC", "Sora", "Claude", "Gemini"]
     max_items: 10
     enabled: true
 
@@ -80,12 +80,20 @@ rss_sources:
 
   # === Newsletter & 深度分析 ===
   a16z:
-    name: "a16z"
-    url: "https://a16z.com/feed/"
-    category: "industry"
-    keywords: ["AI", "artificial intelligence", "LLM", "machine learning", "AGI", "model"]
+    name: "a16z AI"
+    url: "https://a16z.com/tag/ai/feed/"
+    category: "newsletter"
+    keywords: []
     max_items: 10
-    enabled: false  # RSS 不可用，需要手动查找正确地址
+    enabled: true
+
+  a16z_podcast:
+    name: "a16z Podcast"
+    url: "https://feeds.simplecast.com/JGE3yC0V"
+    category: "podcast"
+    keywords: ["AI", "artificial intelligence", "LLM", "machine learning", "AGI", "GPT"]
+    max_items: 5
+    enabled: true
 
   latent_space_newsletter:
     name: "Latent Space"
@@ -153,18 +161,51 @@ twitter:
   enabled: true
   method: "nitter"  # nitter | rss_bridge | manual
 
-  # 关注的账号 (通过 Nitter RSS)
+  # 关注的账号 (通过 Nitter RSS) - AI主要布道者
   accounts:
+    # AI公司创始人/CEO
+    - username: "sama"
+      name: "Sam Altman (OpenAI CEO)"
+    - username: "gaborbrigs"
+      name: "Dario Amodei (Anthropic CEO)"
+    - username: "satlomat"
+      name: "Satya Nadella (Microsoft CEO)"
+    - username: "sundarpichai"
+      name: "Sundar Pichai (Google CEO)"
+
+    # AI研究先驱
     - username: "ylecun"
-      name: "Yann LeCun"
+      name: "Yann LeCun (Meta AI Chief)"
+    - username: "demaboris"
+      name: "Andrej Karpathy (Ex-Tesla/OpenAI)"
+    - username: "JeffDean"
+      name: "Jeff Dean (Google)"
+    - username: "goodfloow"
+      name: "Ian Goodfellow (DeepMind)"
+    - username: "ilyasut"
+      name: "Ilya Sutskever (SSI)"
+
+    # AI意见领袖/投资人
+    - username: "emaboris"
+      name: "Emad Mostaque (Stability AI)"
+    - username: "elaboris"
+      name: "Elon Musk (xAI)"
+    - username: "naval"
+      name: "Naval Ravikant"
+    - username: "garrytan"
+      name: "Garry Tan (YC)"
+
+    # AI开发者/创作者
+    - username: "swyx"
+      name: "Swyx (AI Engineer)"
+    - username: "simonw"
+      name: "Simon Willison"
     - username: "kaborashid"
       name: "Kaif Rashid"
-    - username: "sama"
-      name: "Sam Altman"
-    - username: "demaboris"
-      name: "Andrej Karpathy"
-    - username: "JeffDean"
-      name: "Jeff Dean"
+    - username: "DrJimFan"
+      name: "Jim Fan (NVIDIA)"
+    - username: "LangChainAI"
+      name: "LangChain"
 
   # 搜索关键词 (如果 Nitter 支持)
   search_terms:

@@ -1,5 +1,5 @@
 """
-arXiv paper collector - fetches latest AI/ML papers.
+arXiv paper collector - fetches latest AI/ML papers from top AI companies.
 """
 
 import asyncio
@@ -10,16 +10,43 @@ import xml.etree.ElementTree as ET
 from .base import BaseCollector, NewsItem
 
 
+# 知名AI公司和研究机构的关键词
+AI_COMPANIES = [
+    # 美国科技巨头
+    "OpenAI", "Google", "DeepMind", "Google DeepMind", "Anthropic", "Meta",
+    "Microsoft", "Microsoft Research", "Apple", "Amazon", "AWS", "NVIDIA",
+    # AI独角兽/创业公司
+    "Stability AI", "Mistral", "Cohere", "AI21", "Hugging Face", "xAI",
+    "Inflection", "Character.AI", "Adept", "Runway", "Midjourney",
+    # 中国公司
+    "Baidu", "Alibaba", "Tencent", "ByteDance", "Zhipu", "Moonshot",
+    "01.AI", "Baichuan", "SenseTime", "Megvii",
+    # 顶尖大学/研究机构
+    "Stanford", "MIT", "Berkeley", "CMU", "Harvard", "Princeton",
+    "Oxford", "Cambridge", "ETH Zurich", "Tsinghua", "Peking University",
+    "FAIR", "BAIR", "Allen Institute", "EleutherAI",
+]
+
+# 作者隶属机构匹配 (用于在作者信息中查找)
+AFFILIATION_PATTERNS = [
+    "openai", "deepmind", "google", "anthropic", "meta ai", "microsoft",
+    "nvidia", "apple", "amazon", "stability", "mistral", "cohere",
+    "huggingface", "hugging face", "stanford", "mit ", "berkeley",
+    "cmu", "carnegie mellon", "fair", "bair",
+]
+
+
 class ArxivCollector(BaseCollector):
-    """Collect papers from arXiv."""
+    """Collect papers from arXiv - filtered by top AI companies."""
 
     API_URL = "http://export.arxiv.org/api/query"
 
     def __init__(self, config: dict):
         super().__init__(config)
         self.categories = config.get("categories", ["cs.AI", "cs.LG"])
-        self.max_results = config.get("max_results", 20)
+        self.max_results = config.get("max_results", 50)  # Fetch more to filter
         self.min_score = config.get("min_score", 0)
+        self.filter_companies = config.get("filter_companies", True)
 
     async def collect(self) -> list[NewsItem]:
         """Fetch latest papers from arXiv."""
@@ -54,8 +81,39 @@ class ArxivCollector(BaseCollector):
             return []
 
         items = self._parse_response(content)
-        print(f"[arXiv] Collected {len(items)} papers")
+
+        # 过滤只保留知名AI公司的论文
+        if self.filter_companies:
+            items = self._filter_by_company(items)
+
+        print(f"[arXiv] Collected {len(items)} papers from top AI companies")
         return items
+
+    def _is_from_top_company(self, title: str, summary: str, authors: list[str]) -> bool:
+        """检查论文是否来自知名AI公司或研究机构。"""
+        # 合并所有文本进行检查
+        all_text = f"{title} {summary} {' '.join(authors)}".lower()
+
+        # 检查公司名称
+        for company in AI_COMPANIES:
+            if company.lower() in all_text:
+                return True
+
+        # 检查隶属机构模式
+        for pattern in AFFILIATION_PATTERNS:
+            if pattern in all_text:
+                return True
+
+        return False
+
+    def _filter_by_company(self, items: list[NewsItem]) -> list[NewsItem]:
+        """过滤只保留来自知名AI公司的论文。"""
+        filtered = []
+        for item in items:
+            authors = item.author.split(", ") if item.author else []
+            if self._is_from_top_company(item.title, item.summary or "", authors):
+                filtered.append(item)
+        return filtered
 
     def _parse_response(self, xml_content: str) -> list[NewsItem]:
         """Parse arXiv API XML response."""
@@ -100,12 +158,17 @@ class ArxivCollector(BaseCollector):
                 except:
                     pass
 
-            # Authors
+            # Authors (include affiliation if available)
             authors = []
             for author in entry.findall("atom:author", ns):
                 name = author.find("atom:name", ns)
+                affiliation = author.find("arxiv:affiliation", ns)
                 if name is not None:
-                    authors.append(name.text)
+                    author_str = name.text
+                    if affiliation is not None and affiliation.text:
+                        author_str += f" ({affiliation.text})"
+                    authors.append(author_str)
+
             author_str = ", ".join(authors[:3])
             if len(authors) > 3:
                 author_str += f" et al. ({len(authors)} authors)"

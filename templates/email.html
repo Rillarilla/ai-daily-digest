@@ -8,7 +8,7 @@
         /* Reset and base styles */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
+            line-height: 1.7;
             color: #1a1a1a;
             background-color: #f5f5f5;
             margin: 0;
@@ -44,14 +44,14 @@
         /* Highlights section */
         .highlights {
             background: linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%);
-            padding: 24px;
-            border-bottom: 1px solid #e5e7eb;
+            padding: 28px 24px;
+            border-bottom: 2px solid #e5e7eb;
         }
 
         .highlights h2 {
             color: #4f46e5;
             font-size: 18px;
-            margin: 0 0 16px 0;
+            margin: 0 0 20px 0;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -60,13 +60,45 @@
         .highlights-content {
             font-size: 15px;
             color: #374151;
-            white-space: pre-line;
+        }
+
+        /* 要点列表样式 - 每个要点独立成块 */
+        .highlight-item {
+            background: #ffffff;
+            border-left: 4px solid #4f46e5;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .highlight-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .highlight-number {
+            display: inline-block;
+            background: #4f46e5;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .highlight-text {
+            display: inline;
+            line-height: 1.6;
         }
 
         /* Category sections */
         .category {
-            padding: 24px;
-            border-bottom: 1px solid #e5e7eb;
+            padding: 28px 24px;
+            border-bottom: 2px solid #e5e7eb;
         }
 
         .category:last-child {
@@ -76,11 +108,13 @@
         .category-header {
             font-size: 18px;
             font-weight: 600;
-            margin: 0 0 16px 0;
+            margin: 0 0 20px 0;
             color: #1f2937;
             display: flex;
             align-items: center;
             gap: 8px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f3f4f6;
         }
 
         .category-header .count {
@@ -92,24 +126,29 @@
             font-weight: 500;
         }
 
-        /* News items */
+        /* News items - 卡片式布局 */
         .news-item {
+            background: #fafafa;
+            border-radius: 12px;
+            padding: 20px;
             margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #f3f4f6;
+            border: 1px solid #e5e7eb;
+            transition: box-shadow 0.2s;
         }
 
         .news-item:last-child {
             margin-bottom: 0;
-            padding-bottom: 0;
-            border-bottom: none;
+        }
+
+        .news-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
         .news-title {
-            margin: 0 0 6px 0;
+            margin: 0 0 10px 0;
             font-size: 16px;
             font-weight: 600;
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
         .news-title a {
@@ -124,10 +163,12 @@
         .news-meta {
             font-size: 13px;
             color: #6b7280;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #e5e7eb;
         }
 
         .news-source {
@@ -139,26 +180,43 @@
             font-size: 14px;
             color: #4b5563;
             margin: 0;
-            line-height: 1.5;
+            line-height: 1.7;
+            padding: 12px 0 0 0;
+        }
+
+        /* 中文翻译标记 */
+        .translated {
+            color: #059669;
+            font-size: 11px;
+            margin-left: 8px;
+            padding: 2px 6px;
+            background: #ecfdf5;
+            border-radius: 4px;
         }
 
         /* Tags */
         .tags {
-            margin-top: 8px;
+            margin-top: 12px;
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
         }
 
         .tag {
-            background: #f3f4f6;
-            color: #6b7280;
+            background: #e0e7ff;
+            color: #4338ca;
             font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 500;
         }
 
         /* Paper specific styling */
+        .paper-item {
+            background: linear-gradient(135deg, #f0fdf4 0%, #fafafa 100%);
+            border: 1px solid #bbf7d0;
+        }
+
         .paper-item .news-title a {
             color: #059669;
         }
@@ -171,6 +229,17 @@
             font-size: 13px;
             color: #6b7280;
             font-style: italic;
+        }
+
+        .paper-company {
+            display: inline-block;
+            background: #059669;
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+            font-style: normal;
         }
 
         /* Footer */
@@ -187,6 +256,13 @@
             text-decoration: none;
         }
 
+        /* 分隔线 */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+            margin: 8px 0;
+        }
+
         /* Responsive */
         @media (max-width: 600px) {
             .header {
@@ -197,6 +273,12 @@
             }
             .category, .highlights {
                 padding: 20px 16px;
+            }
+            .news-item {
+                padding: 16px;
+            }
+            .highlight-item {
+                padding: 12px 16px;
             }
         }
     </style>
@@ -213,7 +295,9 @@
         {% if highlights %}
         <div class="highlights">
             <h2>⚡ 今日要点</h2>
-            <div class="highlights-content">{{ highlights }}</div>
+            <div class="highlights-content">
+                {{ highlights | safe }}
+            </div>
         </div>
         {% endif %}
 
@@ -229,6 +313,7 @@
             <div class="news-item {% if category_id == 'papers' %}paper-item{% endif %}">
                 <h3 class="news-title">
                     <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
+                    {% if item.is_translated %}<span class="translated">已翻译</span>{% endif %}
                 </h3>
                 <div class="news-meta">
                     <span class="news-source">{{ item.source }}</span>
@@ -259,7 +344,7 @@
             <p>
                 由 <strong>AI Daily Digest</strong> 自动生成<br>
                 数据来源：RSS feeds, arXiv, Hacker News, X/Twitter<br>
-                <a href="https://github.com">管理订阅</a> ·
+                <a href="https://github.com/Rillarilla/ai-daily-digest">查看源码</a> ·
                 <a href="mailto:rillahai@gmail.com?subject=Feedback">反馈建议</a>
             </p>
         </div>

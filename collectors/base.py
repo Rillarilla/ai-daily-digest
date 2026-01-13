@@ -22,6 +22,7 @@ class NewsItem:
     author: Optional[str] = None
     tags: list[str] = field(default_factory=list)
     score: float = 0.0  # For ranking/importance
+    is_translated: bool = False  # 是否已翻译成中文
 
     @property
     def id(self) -> str:
@@ -40,6 +41,7 @@ class NewsItem:
             "author": self.author,
             "tags": self.tags,
             "score": self.score,
+            "is_translated": self.is_translated,
         }
 
 
