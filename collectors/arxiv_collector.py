@@ -21,10 +21,13 @@ AI_COMPANIES = [
     # 中国公司
     "Baidu", "Alibaba", "Tencent", "ByteDance", "Zhipu", "Moonshot",
     "01.AI", "Baichuan", "SenseTime", "Megvii",
+    "DeepSeek", "Kimi", "MiniMax", "Manus", "StepFun", "Zhipu AI",
+    "智谱", "月之暗面", "深度求索", "阶跃星辰", "百川智能", "零一万物",
     # 顶尖大学/研究机构
     "Stanford", "MIT", "Berkeley", "CMU", "Harvard", "Princeton",
     "Oxford", "Cambridge", "ETH Zurich", "Tsinghua", "Peking University",
     "FAIR", "BAIR", "Allen Institute", "EleutherAI",
+    "Shanghai AI Lab", "Beijing Academy", "Chinese Academy",
 ]
 
 # 作者隶属机构匹配 (用于在作者信息中查找)
@@ -33,6 +36,9 @@ AFFILIATION_PATTERNS = [
     "nvidia", "apple", "amazon", "stability", "mistral", "cohere",
     "huggingface", "hugging face", "stanford", "mit ", "berkeley",
     "cmu", "carnegie mellon", "fair", "bair",
+    "deepseek", "moonshot", "kimi", "minimax", "manus", "stepfun",
+    "zhipu", "baichuan", "01.ai", "yi-", "tsinghua", "peking",
+    "shanghai ai", "beijing academy",
 ]
 
 
