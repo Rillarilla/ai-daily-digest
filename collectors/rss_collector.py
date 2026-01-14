@@ -3,6 +3,7 @@ RSS feed collector - handles all RSS-based sources.
 """
 
 import asyncio
+import re
 from datetime import datetime, timezone
 from typing import Optional
 import aiohttp
@@ -57,6 +58,9 @@ class RSSCollector(BaseCollector):
             # Parse publish date
             published = self._parse_date(entry)
 
+            # Extract image URL
+            image_url = self._extract_image(entry, summary)
+
             item = NewsItem(
                 title=title,
                 url=entry.get("link", ""),
@@ -66,6 +70,7 @@ class RSSCollector(BaseCollector):
                 summary=self._clean_html(summary)[:500],
                 author=entry.get("author"),
                 tags=[tag.term for tag in entry.get("tags", [])][:5],
+                image_url=image_url,
             )
             items.append(item)
 
@@ -74,6 +79,43 @@ class RSSCollector(BaseCollector):
 
         print(f"[{self.source_name}] Collected {len(items)} items")
         return items
+
+    def _extract_image(self, entry, summary: str) -> Optional[str]:
+        """从RSS条目中提取图片URL"""
+        # 方法1: media:content 或 media:thumbnail
+        if hasattr(entry, 'media_content') and entry.media_content:
+            for media in entry.media_content:
+                if media.get('type', '').startswith('image/') or media.get('medium') == 'image':
+                    return media.get('url')
+
+        if hasattr(entry, 'media_thumbnail') and entry.media_thumbnail:
+            return entry.media_thumbnail[0].get('url')
+
+        # 方法2: enclosure
+        if hasattr(entry, 'enclosures') and entry.enclosures:
+            for enc in entry.enclosures:
+                if enc.get('type', '').startswith('image/'):
+                    return enc.get('href') or enc.get('url')
+
+        # 方法3: 从 content 中提取 <img> 标签
+        content = entry.get('content', [{}])[0].get('value', '') if entry.get('content') else ''
+        full_text = summary + content
+
+        img_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', full_text)
+        if img_match:
+            img_url = img_match.group(1)
+            # 过滤掉太小的图片（通常是图标）
+            if not any(x in img_url.lower() for x in ['icon', 'logo', 'avatar', '1x1', 'pixel']):
+                return img_url
+
+        # 方法4: image 字段
+        if hasattr(entry, 'image') and entry.image:
+            if isinstance(entry.image, dict):
+                return entry.image.get('href') or entry.image.get('url')
+            elif isinstance(entry.image, str):
+                return entry.image
+
+        return None
 
     def _parse_date(self, entry) -> Optional[datetime]:
         """Parse date from feed entry."""
@@ -88,7 +130,6 @@ class RSSCollector(BaseCollector):
 
     def _clean_html(self, text: str) -> str:
         """Remove HTML tags from text."""
-        import re
         clean = re.sub(r'<[^>]+>', '', text)
         clean = re.sub(r'\s+', ' ', clean).strip()
         return clean

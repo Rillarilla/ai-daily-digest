@@ -62,7 +62,7 @@
             color: #374151;
         }
 
-        /* 要点列表样式 - 每个要点独立成块 */
+        /* 要点列表样式 */
         .highlight-item {
             background: #ffffff;
             border-left: 4px solid #4f46e5;
@@ -140,8 +140,22 @@
             margin-bottom: 0;
         }
 
-        .news-item:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        /* 图文布局 */
+        .news-content-wrapper {
+            display: flex;
+            gap: 16px;
+        }
+
+        .news-text {
+            flex: 1;
+        }
+
+        .news-image {
+            width: 120px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
         }
 
         .news-title {
@@ -166,9 +180,8 @@
             margin-bottom: 12px;
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
-            padding-bottom: 12px;
-            border-bottom: 1px dashed #e5e7eb;
+            gap: 8px;
+            align-items: center;
         }
 
         .news-source {
@@ -179,19 +192,28 @@
         .news-summary {
             font-size: 14px;
             color: #4b5563;
-            margin: 0;
+            margin: 12px 0 0 0;
             line-height: 1.7;
-            padding: 12px 0 0 0;
         }
 
-        /* 中文翻译标记 */
+        /* 翻译标记 */
         .translated {
             color: #059669;
             font-size: 11px;
-            margin-left: 8px;
             padding: 2px 6px;
             background: #ecfdf5;
             border-radius: 4px;
+        }
+
+        /* 机构标签 */
+        .org-tag {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
         }
 
         /* Tags */
@@ -226,20 +248,21 @@
         }
 
         .paper-authors {
-            font-size: 13px;
+            font-size: 12px;
             color: #6b7280;
             font-style: italic;
+            margin-top: 4px;
         }
 
-        .paper-company {
+        .paper-org-tag {
             display: inline-block;
-            background: #059669;
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
             color: white;
             font-size: 11px;
-            padding: 2px 8px;
+            padding: 3px 10px;
             border-radius: 4px;
-            margin-left: 8px;
-            font-style: normal;
+            font-weight: 600;
+            margin-right: 8px;
         }
 
         /* Footer */
@@ -256,13 +279,6 @@
             text-decoration: none;
         }
 
-        /* 分隔线 */
-        .divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
-            margin: 8px 0;
-        }
-
         /* Responsive */
         @media (max-width: 600px) {
             .header {
@@ -276,6 +292,13 @@
             }
             .news-item {
                 padding: 16px;
+            }
+            .news-content-wrapper {
+                flex-direction: column-reverse;
+            }
+            .news-image {
+                width: 100%;
+                height: 160px;
             }
             .highlight-item {
                 padding: 12px 16px;
@@ -311,29 +334,42 @@
 
             {% for item in items %}
             <div class="news-item {% if category_id == 'papers' %}paper-item{% endif %}">
-                <h3 class="news-title">
-                    <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
-                    {% if item.is_translated %}<span class="translated">已翻译</span>{% endif %}
-                </h3>
-                <div class="news-meta">
-                    <span class="news-source">{{ item.source }}</span>
-                    {% if item.published %}
-                    <span class="news-date">{{ item.published.strftime('%m-%d %H:%M') }}</span>
-                    {% endif %}
-                    {% if item.author and category_id == 'papers' %}
-                    <span class="paper-authors">{{ item.author }}</span>
+                <div class="news-content-wrapper">
+                    <div class="news-text">
+                        <h3 class="news-title">
+                            {% if item.organization and category_id == 'papers' %}
+                            <span class="paper-org-tag">{{ item.organization }}</span>
+                            {% endif %}
+                            <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
+                            {% if item.is_translated %}<span class="translated">已翻译</span>{% endif %}
+                        </h3>
+                        <div class="news-meta">
+                            <span class="news-source">{{ item.source }}</span>
+                            {% if item.published %}
+                            <span class="news-date">{{ item.published.strftime('%m-%d %H:%M') }}</span>
+                            {% endif %}
+                            {% if item.organization and category_id != 'papers' %}
+                            <span class="org-tag">{{ item.organization }}</span>
+                            {% endif %}
+                        </div>
+                        {% if item.author and category_id == 'papers' %}
+                        <div class="paper-authors">{{ item.author }}</div>
+                        {% endif %}
+                        {% if item.summary %}
+                        <p class="news-summary">{{ item.summary }}</p>
+                        {% endif %}
+                        {% if item.tags %}
+                        <div class="tags">
+                            {% for tag in item.tags[:3] %}
+                            <span class="tag">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if item.image_url %}
+                    <img class="news-image" src="{{ item.image_url }}" alt="" loading="lazy" onerror="this.style.display='none'">
                     {% endif %}
                 </div>
-                {% if item.summary %}
-                <p class="news-summary">{{ item.summary }}</p>
-                {% endif %}
-                {% if item.tags %}
-                <div class="tags">
-                    {% for tag in item.tags[:3] %}
-                    <span class="tag">{{ tag }}</span>
-                    {% endfor %}
-                </div>
-                {% endif %}
             </div>
             {% endfor %}
         </div>

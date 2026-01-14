@@ -23,6 +23,8 @@ class NewsItem:
     tags: list[str] = field(default_factory=list)
     score: float = 0.0  # For ranking/importance
     is_translated: bool = False  # 是否已翻译成中文
+    image_url: Optional[str] = None  # 配图URL
+    organization: Optional[str] = None  # 机构/公司标签
 
     @property
     def id(self) -> str:
@@ -42,6 +44,8 @@ class NewsItem:
             "tags": self.tags,
             "score": self.score,
             "is_translated": self.is_translated,
+            "image_url": self.image_url,
+            "organization": self.organization,
         }
 
 

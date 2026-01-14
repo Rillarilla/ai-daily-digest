@@ -4,42 +4,90 @@ arXiv paper collector - fetches latest AI/ML papers from top AI companies.
 
 import asyncio
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Optional, Tuple
 import aiohttp
 import xml.etree.ElementTree as ET
 from .base import BaseCollector, NewsItem
 
 
-# 知名AI公司和研究机构的关键词
-AI_COMPANIES = [
+# 知名AI公司和研究机构的关键词 -> 显示名称映射
+AI_COMPANIES_MAP = {
     # 美国科技巨头
-    "OpenAI", "Google", "DeepMind", "Google DeepMind", "Anthropic", "Meta",
-    "Microsoft", "Microsoft Research", "Apple", "Amazon", "AWS", "NVIDIA",
+    "openai": "OpenAI",
+    "google": "Google",
+    "deepmind": "DeepMind",
+    "google deepmind": "DeepMind",
+    "anthropic": "Anthropic",
+    "meta": "Meta",
+    "meta ai": "Meta AI",
+    "facebook": "Meta",
+    "microsoft": "Microsoft",
+    "microsoft research": "Microsoft",
+    "apple": "Apple",
+    "amazon": "Amazon",
+    "aws": "Amazon",
+    "nvidia": "NVIDIA",
     # AI独角兽/创业公司
-    "Stability AI", "Mistral", "Cohere", "AI21", "Hugging Face", "xAI",
-    "Inflection", "Character.AI", "Adept", "Runway", "Midjourney",
+    "stability ai": "Stability AI",
+    "stability": "Stability AI",
+    "mistral": "Mistral AI",
+    "cohere": "Cohere",
+    "ai21": "AI21 Labs",
+    "hugging face": "Hugging Face",
+    "huggingface": "Hugging Face",
+    "xai": "xAI",
+    "inflection": "Inflection AI",
+    "character.ai": "Character.AI",
+    "adept": "Adept",
+    "runway": "Runway",
     # 中国公司
-    "Baidu", "Alibaba", "Tencent", "ByteDance", "Zhipu", "Moonshot",
-    "01.AI", "Baichuan", "SenseTime", "Megvii",
-    "DeepSeek", "Kimi", "MiniMax", "Manus", "StepFun", "Zhipu AI",
-    "智谱", "月之暗面", "深度求索", "阶跃星辰", "百川智能", "零一万物",
+    "baidu": "Baidu",
+    "alibaba": "Alibaba",
+    "tencent": "Tencent",
+    "bytedance": "ByteDance",
+    "zhipu": "智谱AI",
+    "zhipu ai": "智谱AI",
+    "智谱": "智谱AI",
+    "moonshot": "月之暗面",
+    "月之暗面": "月之暗面",
+    "kimi": "月之暗面",
+    "deepseek": "DeepSeek",
+    "深度求索": "DeepSeek",
+    "minimax": "MiniMax",
+    "manus": "Manus",
+    "stepfun": "阶跃星辰",
+    "阶跃星辰": "阶跃星辰",
+    "01.ai": "零一万物",
+    "零一万物": "零一万物",
+    "yi-": "零一万物",
+    "baichuan": "百川智能",
+    "百川智能": "百川智能",
+    "sensetime": "商汤科技",
+    "megvii": "旷视科技",
     # 顶尖大学/研究机构
-    "Stanford", "MIT", "Berkeley", "CMU", "Harvard", "Princeton",
-    "Oxford", "Cambridge", "ETH Zurich", "Tsinghua", "Peking University",
-    "FAIR", "BAIR", "Allen Institute", "EleutherAI",
-    "Shanghai AI Lab", "Beijing Academy", "Chinese Academy",
-]
+    "stanford": "Stanford",
+    "mit ": "MIT",
+    "berkeley": "UC Berkeley",
+    "cmu": "CMU",
+    "carnegie mellon": "CMU",
+    "harvard": "Harvard",
+    "princeton": "Princeton",
+    "oxford": "Oxford",
+    "cambridge": "Cambridge",
+    "eth zurich": "ETH Zurich",
+    "tsinghua": "清华大学",
+    "peking": "北京大学",
+    "fair": "Meta FAIR",
+    "bair": "UC Berkeley",
+    "allen institute": "Allen Institute",
+    "eleutherai": "EleutherAI",
+    "shanghai ai": "上海AI实验室",
+    "beijing academy": "北京智源",
+    "chinese academy": "中国科学院",
+}
 
-# 作者隶属机构匹配 (用于在作者信息中查找)
-AFFILIATION_PATTERNS = [
-    "openai", "deepmind", "google", "anthropic", "meta ai", "microsoft",
-    "nvidia", "apple", "amazon", "stability", "mistral", "cohere",
-    "huggingface", "hugging face", "stanford", "mit ", "berkeley",
-    "cmu", "carnegie mellon", "fair", "bair",
-    "deepseek", "moonshot", "kimi", "minimax", "manus", "stepfun",
-    "zhipu", "baichuan", "01.ai", "yi-", "tsinghua", "peking",
-    "shanghai ai", "beijing academy",
-]
+# 用于匹配的模式列表
+AFFILIATION_PATTERNS = list(AI_COMPANIES_MAP.keys())
 
 
 class ArxivCollector(BaseCollector):
@@ -88,36 +136,44 @@ class ArxivCollector(BaseCollector):
 
         items = self._parse_response(content)
 
-        # 过滤只保留知名AI公司的论文
+        # 过滤只保留知名AI公司的论文，并添加机构标签
         if self.filter_companies:
-            items = self._filter_by_company(items)
+            items = self._filter_and_tag_by_company(items)
 
         print(f"[arXiv] Collected {len(items)} papers from top AI companies")
         return items
 
-    def _is_from_top_company(self, title: str, summary: str, authors: list[str]) -> bool:
-        """检查论文是否来自知名AI公司或研究机构。"""
-        # 合并所有文本进行检查
+    def _detect_organization(self, title: str, summary: str, authors: list[str]) -> Optional[str]:
+        """检测论文来源机构，返回机构名称"""
         all_text = f"{title} {summary} {' '.join(authors)}".lower()
 
-        # 检查公司名称
-        for company in AI_COMPANIES:
-            if company.lower() in all_text:
-                return True
+        # 按优先级匹配（先匹配大公司）
+        priority_patterns = [
+            "openai", "deepmind", "google deepmind", "anthropic", "meta ai",
+            "microsoft", "nvidia", "deepseek", "moonshot", "zhipu",
+            "mistral", "cohere", "stability"
+        ]
 
-        # 检查隶属机构模式
+        # 先检查高优先级
+        for pattern in priority_patterns:
+            if pattern in all_text:
+                return AI_COMPANIES_MAP.get(pattern)
+
+        # 再检查其他
         for pattern in AFFILIATION_PATTERNS:
             if pattern in all_text:
-                return True
+                return AI_COMPANIES_MAP.get(pattern)
 
-        return False
+        return None
 
-    def _filter_by_company(self, items: list[NewsItem]) -> list[NewsItem]:
-        """过滤只保留来自知名AI公司的论文。"""
+    def _filter_and_tag_by_company(self, items: list[NewsItem]) -> list[NewsItem]:
+        """过滤并为论文添加机构标签"""
         filtered = []
         for item in items:
             authors = item.author.split(", ") if item.author else []
-            if self._is_from_top_company(item.title, item.summary or "", authors):
+            org = self._detect_organization(item.title, item.summary or "", authors)
+            if org:
+                item.organization = org
                 filtered.append(item)
         return filtered
 

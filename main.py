@@ -2,7 +2,7 @@
 """
 AI Daily Digest - Main entry point.
 
-Collects AI news from multiple sources, summarizes with Claude,
+Collects AI news from multiple sources, summarizes with Gemini,
 and sends a beautifully formatted email digest.
 """
 
@@ -67,6 +67,24 @@ async def collect_all_sources(config: dict) -> list[NewsItem]:
     return all_items
 
 
+def translate_items(items: list[NewsItem], summarizer) -> list[NewsItem]:
+    """翻译英文内容为中文"""
+    print("🌐 Translating content...")
+    translated_count = 0
+    for item in items:
+        try:
+            title, summary, is_translated = summarizer.summarize_and_translate(item)
+            item.title = title
+            item.summary = summary
+            item.is_translated = is_translated
+            if is_translated:
+                translated_count += 1
+        except Exception as e:
+            print(f"   Translation error for '{item.title[:30]}...': {e}")
+    print(f"   Translated {translated_count} items\n")
+    return items
+
+
 def main():
     """Main entry point."""
     print(f"\n{'='*60}")
@@ -97,18 +115,27 @@ def main():
     total_items = sum(len(items) for items in categories.values())
     print(f"   After processing: {total_items} items in {len(categories)} categories\n")
 
-    # Generate summaries with Gemini
+    # Initialize summarizer
+    summarizer = None
     highlights = ""
+
     if os.environ.get("GEMINI_API_KEY"):
-        print("🧠 Generating AI summaries...")
+        print("🧠 Initializing Gemini AI...")
         try:
             summarizer = ClaudeSummarizer()
+
+            # Translate items in each category
+            for cat_name, items in categories.items():
+                categories[cat_name] = translate_items(items, summarizer)
+
+            # Generate highlights
+            print("✨ Generating daily highlights...")
             highlights = summarizer.generate_daily_highlights(categories, category_names)
             print("   Highlights generated\n")
         except Exception as e:
-            print(f"   Summarizer error: {e}\n")
+            print(f"   AI error: {e}\n")
     else:
-        print("⚠️  GEMINI_API_KEY not set, skipping AI summaries\n")
+        print("⚠️  GEMINI_API_KEY not set, skipping AI translation and summaries\n")
 
     # Send email
     to_email = os.environ.get("TO_EMAIL", "rillahai@gmail.com")
