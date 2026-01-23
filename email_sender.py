@@ -19,7 +19,7 @@ from collectors.base import NewsItem
 try:
     from weasyprint import HTML, CSS
     WEASYPRINT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     WEASYPRINT_AVAILABLE = False
     print("[PDF] weasyprint not installed, PDF generation disabled")
     print("[PDF] Install with: pip install weasyprint")
@@ -77,6 +77,7 @@ class EmailSender:
 
         try:
             # PDF-specific CSS adjustments
+            # 添加中文字体支持
             pdf_css = CSS(string='''
                 @page {
                     size: A4;
@@ -84,6 +85,7 @@ class EmailSender:
                 }
                 body {
                     font-size: 11px;
+                    font-family: "PingFang SC", "Heiti SC", "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans SC", "Noto Sans CJK SC", "Droid Sans Fallback", "SimSun", sans-serif !important;
                 }
                 .container {
                     max-width: 100%;

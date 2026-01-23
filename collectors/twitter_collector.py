@@ -5,7 +5,6 @@ Twitter/X collector via Nitter and other alternatives.
 import asyncio
 import random
 from datetime import datetime, timezone
-from typing import Optional
 import aiohttp
 import feedparser
 from .base import BaseCollector, NewsItem
@@ -29,6 +28,9 @@ class TwitterCollector(BaseCollector):
         if not self.is_enabled():
             return []
 
+        if self.method != "nitter":
+            print(f"[Twitter] Warning: Method '{self.method}' is not fully supported. Defaulting to Nitter RSS logic.")
+
         all_items = []
 
         # Try to collect from each account
@@ -47,14 +49,16 @@ class TwitterCollector(BaseCollector):
         display_name = account.get("name", username)
 
         # Try each Nitter instance
-        random.shuffle(self.nitter_instances)  # Randomize to distribute load
+        instances = self.nitter_instances.copy()
+        random.shuffle(instances)  # Randomize to distribute load
 
-        for instance in self.nitter_instances:
-            rss_url = f"{instance}/{username}/rss"
+        for instance in instances:
+            rss_url = f"{instance.rstrip('/')}/{username}/rss"
             items = await self._fetch_nitter_rss(rss_url, display_name)
             if items:
                 return items
 
+        print(f"[Twitter] Could not fetch updates for @{username} from any Nitter instance")
         return []
 
     async def _fetch_nitter_rss(
@@ -62,55 +66,71 @@ class TwitterCollector(BaseCollector):
     ) -> list[NewsItem]:
         """Fetch and parse Nitter RSS feed."""
         try:
+            # Browser-like headers to avoid blocking
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/rss+xml,application/xml;q=0.9,*/*;q=0.8"
+            }
             async with aiohttp.ClientSession() as session:
                 async with session.get(
                     url,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                    headers={"User-Agent": "AI-Daily-Digest/1.0"}
+                    timeout=aiohttp.ClientTimeout(total=10, connect=5),
+                    headers=headers
                 ) as response:
                     if response.status != 200:
+                        # Silently fail for individual instances to avoid log spam
                         return []
                     content = await response.text()
+
+                    if not content or "Rate limit exceeded" in content:
+                        return []
         except Exception:
+            # Silently fail for individual instances
             return []
 
-        feed = feedparser.parse(content)
-        items = []
+        try:
+            feed = feedparser.parse(content)
+            if feed.get("bozo"):
+                return []
 
-        for entry in feed.entries[:5]:  # Latest 5 tweets per account
-            title = entry.get("title", "")
-            if not title:
-                continue
+            items = []
+            for entry in feed.entries[:5]:  # Latest 5 tweets per account
+                title = entry.get("title", "")
+                if not title:
+                    continue
 
-            # Clean up Nitter formatting
-            title = self._clean_tweet(title)
+                # Clean up Nitter formatting
+                title = self._clean_tweet(title)
 
-            # Skip retweets unless significant
-            if title.startswith("RT @"):
-                continue
+                # Skip retweets unless significant
+                if title.startswith("RT @"):
+                    continue
 
-            published = None
-            if entry.get("published_parsed"):
-                try:
-                    published = datetime(
-                        *entry.published_parsed[:6],
-                        tzinfo=timezone.utc
-                    )
-                except:
-                    pass
+                published = None
+                if entry.get("published_parsed"):
+                    try:
+                        published = datetime(
+                            *entry.published_parsed[:6],
+                            tzinfo=timezone.utc
+                        )
+                    except:
+                        pass
 
-            item = NewsItem(
-                title=title[:280],  # Truncate to tweet length
-                url=entry.get("link", ""),
-                source=f"@{source_name}" if not source_name.startswith("@") else source_name,
-                category="social",
-                published=published,
-                summary=None,
-                author=source_name,
-            )
-            items.append(item)
+                item = NewsItem(
+                    title=title[:280],  # Truncate to tweet length
+                    url=entry.get("link", ""),
+                    source=f"@{source_name}" if not source_name.startswith("@") else source_name,
+                    category="social",
+                    published=published,
+                    summary=None,
+                    author=source_name,
+                )
+                items.append(item)
 
-        return items
+            return items
+        except Exception as e:
+            print(f"[Twitter] Error parsing feed content: {e}")
+            return []
 
     def _clean_tweet(self, text: str) -> str:
         """Clean up tweet text."""

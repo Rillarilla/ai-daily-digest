@@ -30,19 +30,19 @@ rss_sources:
 
   openai:
     name: "OpenAI Blog"
-    url: "https://openai.com/blog/rss/"
+    url: "https://openai.com/news/rss.xml"
     category: "big_tech"
     keywords: []
     max_items: 10
-    enabled: false  # 403 blocked, disabled
+    enabled: true
 
   anthropic:
     name: "Anthropic News"
-    url: "https://www.anthropic.com/rss.xml"
+    url: "https://www.anthropic.com/rss"  # 404 Not Found
     category: "big_tech"
     keywords: []
     max_items: 10
-    enabled: false  # 404, disabled
+    enabled: false
 
   # === 投融资 & 行业新闻 ===
   techcrunch_ai:
@@ -81,9 +81,9 @@ rss_sources:
   # === Newsletter & 深度分析 ===
   a16z:
     name: "a16z AI"
-    url: "https://a16z.com/tag/ai/feed/"
+    url: "https://www.a16z.news/feed/"
     category: "newsletter"
-    keywords: []
+    keywords: ["AI", "Artificial Intelligence"]
     max_items: 10
     enabled: true
 
@@ -122,15 +122,15 @@ rss_sources:
   # === Podcasts ===
   no_priors:
     name: "No Priors"
-    url: "https://anchor.fm/s/f01a4358/podcast/rss"
+    url: "https://feeds.simplecast.com/82FI35Px"
     category: "podcast"
     keywords: []
     max_items: 5
-    enabled: false  # RSS 不可用，需要手动查找正确地址
+    enabled: true
 
   latent_space_podcast:
     name: "Latent Space Podcast"
-    url: "https://api.substack.com/feed/podcast/1084089.rss"
+    url: "https://www.latent.space/feed"
     category: "podcast"
     keywords: []
     max_items: 5
@@ -216,21 +216,26 @@ twitter:
 
   # Nitter 实例列表 (会自动尝试可用的)
   nitter_instances:
-    - "https://nitter.privacydev.net"
+    - "https://nitter.privacyredirect.com"
+    - "https://xcancel.com"
     - "https://nitter.poast.org"
-    - "https://nitter.1d4.us"
+    - "https://nitter.tiekoetter.com"
+    - "https://nitter.catsarch.com"
+    - "https://nitter.privacy.com.de"
+    - "https://nitter.moomoo.me"
+    - "https://nitter.perennialte.ch"
 
 # Hacker News 热门 AI 讨论
 hackernews:
   enabled: true
   url: "https://hnrss.org/newest?q=AI+OR+LLM+OR+GPT+OR+Claude"
-  min_points: 10  # Lower threshold to get more results
+  min_points: 5  # Lowered from 10 to ensure we get results
   max_items: 10
 
 # 输出配置
 output:
-  # 每个分类最多显示多少条
-  max_per_category: 5
+  # 每个分类最多显示多少条 (增加此值以容纳更多来源，特别是Podcast)
+  max_per_category: 20
 
   # 分类显示顺序
   category_order:

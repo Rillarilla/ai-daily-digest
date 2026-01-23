@@ -33,7 +33,7 @@ def deduplicate_items(items: list[NewsItem]) -> list[NewsItem]:
 
 def filter_by_date(
     items: list[NewsItem],
-    days: int = 7
+    days: float = 1.2
 ) -> list[NewsItem]:
     """Filter items to only include recent ones."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
@@ -83,13 +83,13 @@ def group_by_category(
 def process_items(
     items: list[NewsItem],
     max_per_category: int = 5,
-    days: int = 7
+    days: float = 1.2  # Reduced from 7 to 1.2 (approx 29 hours) for strict daily filtering
 ) -> dict[str, list[NewsItem]]:
     """Full processing pipeline: dedupe, filter, sort, group."""
     # Deduplicate
     items = deduplicate_items(items)
 
-    # Filter by date
+    # Filter by date (strictly recent items)
     items = filter_by_date(items, days=days)
 
     # Sort by date

@@ -2,9 +2,7 @@
 Hacker News collector for AI discussions.
 """
 
-import asyncio
 from datetime import datetime, timezone
-from typing import Optional
 import aiohttp
 import feedparser
 from .base import BaseCollector, NewsItem
@@ -56,11 +54,18 @@ class HackerNewsCollector(BaseCollector):
             description = entry.get("description", "")
             if "points" in description.lower():
                 import re
-                points_match = re.search(r'(\d+)\s*points?', description)
+                # Improved regex to handle "Points: 123" or "123 points"
+                points_match = re.search(r'points?:\s*(\d+)', description, re.IGNORECASE)
+                if not points_match:
+                    points_match = re.search(r'(\d+)\s*points?', description, re.IGNORECASE)
+
                 if points_match:
                     points = int(points_match.group(1))
 
-                comments_match = re.search(r'(\d+)\s*comments?', description)
+                comments_match = re.search(r'comments?:\s*(\d+)', description, re.IGNORECASE)
+                if not comments_match:
+                    comments_match = re.search(r'(\d+)\s*comments?', description, re.IGNORECASE)
+
                 if comments_match:
                     comments = int(comments_match.group(1))
 

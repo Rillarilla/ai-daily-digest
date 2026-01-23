@@ -29,18 +29,30 @@ class RSSCollector(BaseCollector):
             return []
 
         try:
+            # Use a browser-like User-Agent to avoid being blocked (e.g. by 36Kr)
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+            }
             async with aiohttp.ClientSession() as session:
                 async with session.get(
                     self.feed_url,
-                    timeout=aiohttp.ClientTimeout(total=30),
-                    headers={"User-Agent": "AI-Daily-Digest/1.0"}
+                    timeout=aiohttp.ClientTimeout(total=30, connect=10),
+                    headers=headers,
+                    allow_redirects=True
                 ) as response:
                     if response.status != 200:
                         print(f"[{self.source_name}] HTTP {response.status}")
                         return []
-                    content = await response.text()
+
+                    try:
+                        content = await response.text()
+                    except aiohttp.ClientPayloadError:
+                        # Fallback for partial payloads - some servers are buggy
+                        content = await response.read()
+                        content = content.decode('utf-8', errors='replace')
         except Exception as e:
-            print(f"[{self.source_name}] Fetch error: {e}")
+            print(f"[{self.source_name}] Fetch error: {type(e).__name__}: {e}")
             return []
 
         # Parse feed
@@ -49,17 +61,44 @@ class RSSCollector(BaseCollector):
 
         for entry in feed.entries[:self.max_items * 2]:  # Fetch extra for filtering
             title = entry.get("title", "")
-            summary = entry.get("summary", entry.get("description", ""))
+
+            # 优先使用 content (通常包含完整文章), 其次是 summary/description
+            content_list = entry.get("content", [])
+            full_content = ""
+            if content_list:
+                # 寻找 text/html 或 text/plain
+                for c in content_list:
+                    if c.get("type") in ["text/html", "text/plain"]:
+                        full_content = c.get("value", "")
+                        break
+
+            # Check if content is invalid (anti-bot)
+            if self._is_invalid_content(full_content):
+                # Fallback to summary if content is invalid
+                full_content = ""
+
+            # 如果 content 为空 (或无效)，尝试使用 summary_detail 或 summary
+            if not full_content:
+                full_content = entry.get("summary", entry.get("description", ""))
+
+            # Clean HTML tags for filtering and display
+            clean_content = self._clean_html(full_content)
+
+            # Filter out invalid content (anti-bot responses) - Final check
+            if self._is_invalid_content(clean_content):
+                print(f"[{self.source_name}] Skipped invalid content: {title}")
+                continue
 
             # Apply keyword filter
-            if not self.filter_by_keywords(f"{title} {summary}", self.keywords):
+            # Check title and content combination
+            if not self.filter_by_keywords(f"{title} {clean_content}", self.keywords):
                 continue
 
             # Parse publish date
             published = self._parse_date(entry)
 
             # Extract image URL
-            image_url = self._extract_image(entry, summary)
+            image_url = self._extract_image(entry, full_content)
 
             item = NewsItem(
                 title=title,
@@ -67,7 +106,8 @@ class RSSCollector(BaseCollector):
                 source=self.source_name,
                 category=self.category,
                 published=published,
-                summary=self._clean_html(summary)[:500],
+                summary=clean_content[:1000],  # 保留更多内容给 LLM 总结
+                content=clean_content,         # 保存完整内容
                 author=entry.get("author"),
                 tags=[tag.term for tag in entry.get("tags", [])][:5],
                 image_url=image_url,
@@ -129,10 +169,40 @@ class RSSCollector(BaseCollector):
         return None
 
     def _clean_html(self, text: str) -> str:
-        """Remove HTML tags from text."""
-        clean = re.sub(r'<[^>]+>', '', text)
-        clean = re.sub(r'\s+', ' ', clean).strip()
-        return clean
+        """Remove HTML tags from text but preserve some structure."""
+        if not text:
+            return ""
+
+        # Replace block elements and breaks with newlines to preserve structure
+        text = re.sub(r'<(p|div|br|li|h[1-6]|tr)[^>]*>', '\n', text, flags=re.IGNORECASE)
+
+        # Remove all other tags
+        text = re.sub(r'<[^>]+>', '', text)
+
+        # Collapse multiple spaces but preserve newlines
+        lines = []
+        for line in text.split('\n'):
+            cleaned_line = re.sub(r'\s+', ' ', line).strip()
+            if cleaned_line:
+                lines.append(cleaned_line)
+
+        return '\n'.join(lines)
+
+
+    def _is_invalid_content(self, text: str) -> bool:
+        """Check if content is an anti-bot response or invalid."""
+        if not text:
+            return False
+        invalid_markers = [
+            "request result",
+            "enable javascript",
+            "javascript is disabled",
+            "please enable js",
+            "access denied",
+            "security check"
+        ]
+        text_lower = text.lower()
+        return any(marker in text_lower for marker in invalid_markers)
 
 
 async def collect_all_rss(rss_config: dict) -> list[NewsItem]:

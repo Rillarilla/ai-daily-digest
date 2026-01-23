@@ -2,7 +2,7 @@
 Processors package - summarization, deduplication, etc.
 """
 
-from .summarizer import ClaudeSummarizer
+from .summarizer import GeminiSummarizer
 from .deduper import (
     deduplicate_items,
     filter_by_date,
@@ -12,7 +12,7 @@ from .deduper import (
 )
 
 __all__ = [
-    "ClaudeSummarizer",
+    "GeminiSummarizer",
     "deduplicate_items",
     "filter_by_date",
     "sort_items",

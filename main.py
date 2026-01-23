@@ -24,7 +24,7 @@ from collectors import (
     collect_hackernews,
     NewsItem,
 )
-from processors import ClaudeSummarizer, process_items
+from processors import GeminiSummarizer, process_items
 from email_sender import send_digest_email
 
 
@@ -67,26 +67,55 @@ async def collect_all_sources(config: dict) -> list[NewsItem]:
     return all_items
 
 
-def translate_items(items: list[NewsItem], summarizer) -> list[NewsItem]:
-    """翻译英文内容为中文"""
-    print("🌐 Translating content...")
-    translated_count = 0
+async def translate_items(items: list[NewsItem], summarizer) -> list[NewsItem]:
+    """翻译英文内容为中文 (Parallel)"""
+    print(f"🌐 Translating {len(items)} items...")
+
+    # Use the summarizer's parallel processing method directly
+    # But we need to filter IRRELEVANT ones afterwards
+
+    # We'll use a custom processing loop here to keep the IRRELEVANT filtering logic
+    # but utilize parallel execution
+
+    tasks = []
     for item in items:
-        try:
-            title, summary, is_translated = summarizer.summarize_and_translate(item)
-            item.title = title
-            item.summary = summary
-            item.is_translated = is_translated
-            if is_translated:
-                translated_count += 1
-        except Exception as e:
-            print(f"   Translation error for '{item.title[:30]}...': {e}")
-    print(f"   Translated {translated_count} items\n")
-    return items
+        tasks.append(summarizer.summarize_and_translate(item))
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    valid_items = []
+    translated_count = 0
+
+    for i, result in enumerate(results):
+        item = items[i]
+
+        if isinstance(result, Exception):
+            print(f"   Translation error for '{item.title[:30]}...': {result}")
+            # Keep original on error
+            valid_items.append(item)
+            continue
+
+        title, summary, is_translated = result
+
+        # Filter irrelevant content
+        if summary and "IRRELEVANT" in summary:
+            print(f"   🚫 Skipping irrelevant item: {item.title}")
+            continue
+
+        item.title = title
+        item.summary = summary
+        item.is_translated = is_translated
+        if is_translated:
+            translated_count += 1
+
+        valid_items.append(item)
+
+    print(f"   Translated {translated_count} items (Filtered {len(items) - len(valid_items)} irrelevant)\n")
+    return valid_items
 
 
-def main():
-    """Main entry point."""
+async def main_async():
+    """Main entry point (Async)."""
     print(f"\n{'='*60}")
     print(f"🤖 AI Daily Digest - {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print(f"{'='*60}\n")
@@ -102,7 +131,7 @@ def main():
 
     # Collect from all sources
     print("📡 Collecting from sources...")
-    all_items = asyncio.run(collect_all_sources(config))
+    all_items = await collect_all_sources(config)
     print(f"   Total collected: {len(all_items)} items\n")
 
     if not all_items:
@@ -119,18 +148,25 @@ def main():
     summarizer = None
     highlights = ""
 
-    if os.environ.get("GEMINI_API_KEY"):
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        # Fallback check
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            print("⚠️  ANTHROPIC_API_KEY found but GEMINI_API_KEY is missing.")
+            print("    The project has migrated to Google Gemini. Please set GEMINI_API_KEY.")
+
+    if api_key:
         print("🧠 Initializing Gemini AI...")
         try:
-            summarizer = ClaudeSummarizer()
+            summarizer = GeminiSummarizer(api_key=api_key)
 
-            # Translate items in each category
+            # Translate items in each category (Processing categories sequentially, items parallel)
             for cat_name, items in categories.items():
-                categories[cat_name] = translate_items(items, summarizer)
+                categories[cat_name] = await translate_items(items, summarizer)
 
             # Generate highlights
             print("✨ Generating daily highlights...")
-            highlights = summarizer.generate_daily_highlights(categories, category_names)
+            highlights = await summarizer.generate_daily_highlights(categories, category_names)
             print("   Highlights generated\n")
         except Exception as e:
             print(f"   AI error: {e}\n")
@@ -154,6 +190,11 @@ def main():
     else:
         print("\n❌ Failed to send email. Check SMTP configuration.")
         return 1
+
+
+def main():
+    """Wrapper for async main."""
+    sys.exit(asyncio.run(main_async()))
 
 
 if __name__ == "__main__":

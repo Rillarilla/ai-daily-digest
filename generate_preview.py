@@ -20,7 +20,7 @@ from collectors import (
     collect_twitter,
     collect_hackernews,
 )
-from processors import process_items
+from processors import process_items, GeminiSummarizer
 
 
 def load_config():
@@ -38,6 +38,7 @@ async def generate_preview():
         collect_all_rss(config.get("rss_sources", {})),
         collect_arxiv(config.get("arxiv", {})),
         collect_hackernews(config.get("hackernews", {})),
+        collect_twitter(config.get("twitter", {})),
     ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -60,12 +61,27 @@ async def generate_preview():
 
     item_count = sum(len(items) for items in categories.values())
 
-    # Mock highlights (no Claude API needed for preview)
+    # Mock highlights (fallback)
     highlights = """1. TechCrunch 报道 Motional 将在2025年于拉斯维加斯推出无人驾驶 robotaxi 服务，重心转向 AI 驱动的技术架构
 2. Google 针对特定医疗查询移除了 AI Overviews 功能，此前被曝出提供误导性健康信息
 3. arXiv 最新论文聚焦图神经网络训练和大模型集成解码技术
 4. 36氪：智谱单日涨幅超31%，国内大模型概念股活跃
 5. 印度信实工业宣布776亿美元投资计划，将建设印度最大 AI 数据中心"""
+
+    # Try to generate real highlights if API key is present
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        print("\n✨ GEMINI_API_KEY found, generating real highlights...")
+        try:
+            summarizer = GeminiSummarizer(api_key=api_key)
+            # Note: We are passing untranslated items here.
+            # The summarizer handles raw titles which is usually fine for highlights.
+            generated_highlights = await summarizer.generate_daily_highlights(categories, category_names)
+            if generated_highlights:
+                highlights = generated_highlights
+        except Exception as e:
+            print(f"⚠️ Failed to generate highlights: {e}")
+            print("   Using fallback mock highlights.")
 
     html = template.render(
         date=datetime.now().strftime("%Y年%m月%d日"),

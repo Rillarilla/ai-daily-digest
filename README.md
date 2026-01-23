@@ -1,6 +1,6 @@
 # AI Daily Digest
 
-每天自动收集 AI 行业资讯，通过 Claude 智能摘要，发送精美邮件简报。
+每天自动收集 AI 行业资讯，通过 Google Gemini 智能摘要，发送精美邮件简报。
 
 ## 功能特性
 
@@ -14,16 +14,34 @@
 
 ### 1. 安装依赖
 
+#### Python 依赖
 ```bash
 cd ai-daily-digest
 pip install -r requirements.txt
 ```
 
+#### 系统依赖 (用于生成 PDF)
+本项目使用 WeasyPrint 生成 PDF 附件。如果不需要 PDF 功能，可以忽略此步。
+
+**macOS:**
+```bash
+brew install pango libffi
+```
+
+**Ubuntu/Debian:**
+```bash
+# 系统依赖
+sudo apt-get install build-essential python3-dev python3-pip python3-setuptools python3-wheel python3-cffi libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
+
+# 中文字体 (解决 PDF 中文乱码)
+sudo apt-get install fonts-noto-cjk fonts-wqy-zenhei
+```
+
 ### 2. 配置环境变量
 
 ```bash
-# Claude API (用于智能摘要)
-export ANTHROPIC_API_KEY="your-api-key"
+# Gemini API (用于智能摘要)
+export GEMINI_API_KEY="your-gemini-api-key"
 
 # Gmail SMTP (用于发送邮件)
 export SMTP_USER="your-email@gmail.com"
@@ -41,7 +59,7 @@ python main.py
 
 1. Fork 或 push 代码到 GitHub
 2. 在 Settings → Secrets and variables → Actions 添加 secrets:
-   - `ANTHROPIC_API_KEY`
+   - `GEMINI_API_KEY`
    - `SMTP_USER`
    - `SMTP_PASSWORD`
 3. 启用 Actions，每天北京时间 8:00 自动运行
@@ -95,7 +113,7 @@ ai-daily-digest/
 │   ├── twitter_collector.py # X/Twitter 采集器
 │   └── hackernews_collector.py
 ├── processors/
-│   ├── summarizer.py      # Claude 摘要
+│   ├── summarizer.py      # Gemini 摘要
 │   └── deduper.py         # 去重排序
 ├── templates/
 │   └── email.html         # 邮件模板

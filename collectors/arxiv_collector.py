@@ -3,8 +3,8 @@ arXiv paper collector - fetches latest AI/ML papers from top AI companies.
 """
 
 import asyncio
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Tuple
+from datetime import datetime
+from typing import Optional
 import aiohttp
 import xml.etree.ElementTree as ET
 from .base import BaseCollector, NewsItem
@@ -99,7 +99,6 @@ class ArxivCollector(BaseCollector):
         super().__init__(config)
         self.categories = config.get("categories", ["cs.AI", "cs.LG"])
         self.max_results = config.get("max_results", 50)  # Fetch more to filter
-        self.min_score = config.get("min_score", 0)
         self.filter_companies = config.get("filter_companies", True)
 
     async def collect(self) -> list[NewsItem]:
@@ -198,7 +197,8 @@ class ArxivCollector(BaseCollector):
             title_text = title.text.strip().replace("\n", " ") if title is not None else ""
 
             summary = entry.find("atom:summary", ns)
-            summary_text = summary.text.strip().replace("\n", " ")[:500] if summary is not None else ""
+            # Increase limit from 500 to 3000 to capture full abstract for LLM summarization
+            summary_text = summary.text.strip().replace("\n", " ")[:3000] if summary is not None else ""
 
             # Get paper link (prefer abstract page)
             link = ""
