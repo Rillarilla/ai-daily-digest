@@ -7,7 +7,7 @@
 - 🏢 **大厂动态**: Apple, Google, DeepMind, OpenAI, Anthropic
 - 📄 **前沿论文**: arXiv cs.AI/LG/CL/CV 最新论文
 - 💰 **行业投融资**: TechCrunch, VentureBeat AI 融资新闻
-- 🐦 **社交热议**: X/Twitter AI 意见领袖动态, Hacker News
+- 🐦 **社交热议**: Hacker News (Twitter 暂不可用)
 - 🇨🇳 **国内动态**: 36氪等中文科技媒体
 
 ## 快速开始
