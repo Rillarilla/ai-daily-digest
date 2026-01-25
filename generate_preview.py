@@ -68,19 +68,27 @@ async def generate_preview():
 4. 36氪：智谱单日涨幅超31%，国内大模型概念股活跃
 5. 印度信实工业宣布776亿美元投资计划，将建设印度最大 AI 数据中心"""
 
-    # Try to generate real highlights if API key is present
+    # Try to generate real highlights and process items if API key is present
     api_key = os.environ.get("GEMINI_API_KEY")
     if api_key:
-        print("\n✨ GEMINI_API_KEY found, generating real highlights...")
+        print("\n✨ GEMINI_API_KEY found, processing items and generating real highlights...")
         try:
             summarizer = GeminiSummarizer(api_key=api_key)
-            # Note: We are passing untranslated items here.
-            # The summarizer handles raw titles which is usually fine for highlights.
+
+            # Translate and filter items in each category
+            for cat_name, items in categories.items():
+                valid_items, _ = await summarizer.process_and_filter_items(items)
+                categories[cat_name] = valid_items
+
+            # Recount items after filtering
+            item_count = sum(len(items) for items in categories.values())
+
+            # Note: We are passing translated/filtered items here.
             generated_highlights = await summarizer.generate_daily_highlights(categories, category_names)
             if generated_highlights:
                 highlights = generated_highlights
         except Exception as e:
-            print(f"⚠️ Failed to generate highlights: {e}")
+            print(f"⚠️ Failed to process/generate highlights: {e}")
             print("   Using fallback mock highlights.")
 
     html = template.render(

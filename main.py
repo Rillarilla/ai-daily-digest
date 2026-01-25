@@ -67,53 +67,6 @@ async def collect_all_sources(config: dict) -> list[NewsItem]:
     return all_items
 
 
-async def translate_items(items: list[NewsItem], summarizer) -> list[NewsItem]:
-    """翻译英文内容为中文 (Parallel)"""
-    print(f"🌐 Translating {len(items)} items...")
-
-    # Use the summarizer's parallel processing method directly
-    # But we need to filter IRRELEVANT ones afterwards
-
-    # We'll use a custom processing loop here to keep the IRRELEVANT filtering logic
-    # but utilize parallel execution
-
-    tasks = []
-    for item in items:
-        tasks.append(summarizer.summarize_and_translate(item))
-
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    valid_items = []
-    translated_count = 0
-
-    for i, result in enumerate(results):
-        item = items[i]
-
-        if isinstance(result, Exception):
-            print(f"   Translation error for '{item.title[:30]}...': {result}")
-            # Keep original on error
-            valid_items.append(item)
-            continue
-
-        title, summary, is_translated = result
-
-        # Filter irrelevant content
-        if summary and "IRRELEVANT" in summary:
-            print(f"   🚫 Skipping irrelevant item: {item.title}")
-            continue
-
-        item.title = title
-        item.summary = summary
-        item.is_translated = is_translated
-        if is_translated:
-            translated_count += 1
-
-        valid_items.append(item)
-
-    print(f"   Translated {translated_count} items (Filtered {len(items) - len(valid_items)} irrelevant)\n")
-    return valid_items
-
-
 async def main_async():
     """Main entry point (Async)."""
     print(f"\n{'='*60}")
@@ -162,7 +115,8 @@ async def main_async():
 
             # Translate items in each category (Processing categories sequentially, items parallel)
             for cat_name, items in categories.items():
-                categories[cat_name] = await translate_items(items, summarizer)
+                valid_items, _ = await summarizer.process_and_filter_items(items)
+                categories[cat_name] = valid_items
 
             # Generate highlights
             print("✨ Generating daily highlights...")

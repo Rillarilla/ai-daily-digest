@@ -298,6 +298,54 @@ class GeminiSummarizer:
 
         return processed_items
 
+    async def process_and_filter_items(
+        self,
+        items: list[NewsItem],
+        max_items: int = 30
+    ) -> tuple[list[NewsItem], int]:
+        """
+        Process items with translation and filter out irrelevant content.
+        Returns (valid_items, translated_count).
+        """
+        print(f"🌐 Translating {len(items)} items...")
+
+        # Parallel processing
+        tasks = []
+        for item in items:
+            tasks.append(self.summarize_and_translate(item))
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        valid_items = []
+        translated_count = 0
+
+        for i, result in enumerate(results):
+            item = items[i]
+
+            if isinstance(result, Exception):
+                print(f"   Translation error for '{item.title[:30]}...': {result}")
+                # Keep original on error
+                valid_items.append(item)
+                continue
+
+            title, summary, is_translated = result
+
+            # Filter irrelevant content
+            if summary and "IRRELEVANT" in summary:
+                print(f"   🚫 Skipping irrelevant item: {item.title}")
+                continue
+
+            item.title = title
+            item.summary = summary
+            item.is_translated = is_translated
+            if is_translated:
+                translated_count += 1
+
+            valid_items.append(item)
+
+        print(f"   Translated {translated_count} items (Filtered {len(items) - len(valid_items)} irrelevant)\n")
+        return valid_items, translated_count
+
     async def batch_summarize(
         self,
         items: list[NewsItem],
