@@ -77,7 +77,8 @@ async def test_collectors():
 
     # Process
     output_config = config.get("output", {})
-    categories = process_items(all_items, max_per_category=5)
+    max_per_category = output_config.get("max_per_category", 5)
+    categories = process_items(all_items, max_per_category=max_per_category)
 
     print(f"\n📋 分类统计:")
     category_names = output_config.get("category_names", {})

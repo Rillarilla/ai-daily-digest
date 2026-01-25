@@ -52,7 +52,8 @@ async def generate_preview():
     # Process
     output_config = config.get("output", {})
     category_names = output_config.get("category_names", {})
-    categories = process_items(all_items, max_per_category=5)
+    max_per_category = output_config.get("max_per_category", 5)
+    categories = process_items(all_items, max_per_category=max_per_category)
 
     # Render template
     template_dir = Path(__file__).parent / "templates"
