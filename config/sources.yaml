@@ -158,7 +158,7 @@ arxiv:
 
 # X/Twitter 替代方案配置
 twitter:
-  enabled: true
+  enabled: false  # Disabled due to Nitter instability
   method: "nitter"  # nitter | rss_bridge | manual
 
   # 关注的账号 (通过 Nitter RSS) - AI主要布道者
@@ -229,7 +229,7 @@ twitter:
 hackernews:
   enabled: true
   url: "https://hnrss.org/newest?q=AI+OR+LLM+OR+GPT+OR+Claude"
-  min_points: 5  # Lowered from 10 to ensure we get results
+  min_points: 1  # Lowered to 1 to catch newest items (we filter by AI relevance later)
   max_items: 10
 
 # 输出配置
