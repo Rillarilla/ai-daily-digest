@@ -144,6 +144,30 @@ rss_sources:
     max_items: 5
     enabled: true
 
+  mlst:
+    name: "Machine Learning Street Talk"
+    url: "https://anchor.fm/s/1d0d90d0/podcast/rss"
+    category: "podcast"
+    keywords: []
+    max_items: 5
+    enabled: true
+
+  dwarkesh_podcast:
+    name: "The Dwarkesh Podcast"
+    url: "https://feed.podbean.com/dwarkeshpatel/feed.xml"
+    category: "podcast"
+    keywords: []
+    max_items: 5
+    enabled: true
+
+  gradient_dissent:
+    name: "Gradient Dissent"
+    url: "https://feeds.simplecast.com/2M5r6Wz7"
+    category: "podcast"
+    keywords: []
+    max_items: 5
+    enabled: true
+
 # arXiv 论文配置
 arxiv:
   enabled: true
