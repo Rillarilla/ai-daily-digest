@@ -3,8 +3,12 @@ Hacker News collector for AI discussions.
 """
 
 from datetime import datetime, timezone
+import asyncio
+import re
+from datetime import datetime, timezone
 import aiohttp
 import feedparser
+from bs4 import BeautifulSoup
 from .base import BaseCollector, NewsItem
 
 
@@ -19,6 +23,36 @@ class HackerNewsCollector(BaseCollector):
         )
         self.min_points = config.get("min_points", 50)
         self.max_items = config.get("max_items", 10)
+
+    async def _fetch_article_content(self, url: str) -> str:
+        """Fetch and extract main text content from the article URL."""
+        if not url or url.startswith("https://news.ycombinator.com"):
+            return ""
+
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, timeout=10) as response:
+                    if response.status != 200:
+                        return ""
+
+                    html = await response.text()
+                    soup = BeautifulSoup(html, 'html.parser')
+
+                    # Remove scripts and styles
+                    for script in soup(["script", "style", "nav", "footer", "header"]):
+                        script.decompose()
+
+                    # Extract text from paragraphs (simple heuristics)
+                    paragraphs = soup.find_all('p')
+                    text_content = "\n\n".join([p.get_text().strip() for p in paragraphs if len(p.get_text().strip()) > 50])
+
+                    return text_content[:5000] # Limit content length
+        except Exception as e:
+            print(f"[HN] Content fetch error for {url}: {e}")
+            return ""
 
     async def collect(self) -> list[NewsItem]:
         """Fetch HN discussions via hnrss.org."""
@@ -41,37 +75,58 @@ class HackerNewsCollector(BaseCollector):
             return []
 
         feed = feedparser.parse(content)
-        items = []
+        candidates = []
 
-        for entry in feed.entries[:self.max_items * 2]:
+        # First pass: Filter and collect candidates
+        for entry in feed.entries[:self.max_items * 3]: # Fetch more candidates
             title = entry.get("title", "")
+            description = entry.get("description", "")
 
-            # Parse points from title if available (hnrss format)
+            # Parse points
             points = 0
             comments = 0
-
-            # hnrss includes points in description
-            description = entry.get("description", "")
             if "points" in description.lower():
                 import re
-                # Improved regex to handle "Points: 123" or "123 points"
                 points_match = re.search(r'points?:\s*(\d+)', description, re.IGNORECASE)
                 if not points_match:
                     points_match = re.search(r'(\d+)\s*points?', description, re.IGNORECASE)
-
                 if points_match:
                     points = int(points_match.group(1))
 
                 comments_match = re.search(r'comments?:\s*(\d+)', description, re.IGNORECASE)
                 if not comments_match:
                     comments_match = re.search(r'(\d+)\s*comments?', description, re.IGNORECASE)
-
                 if comments_match:
                     comments = int(comments_match.group(1))
 
-            # Filter by minimum points
             if points < self.min_points:
                 continue
+
+            candidates.append({
+                "entry": entry,
+                "points": points,
+                "comments": comments
+            })
+
+        # Sort by score and take top items
+        candidates.sort(key=lambda x: x["points"], reverse=True)
+        top_candidates = candidates[:self.max_items]
+
+        # Fetch content for top candidates in parallel
+        items = []
+        fetch_tasks = []
+
+        for cand in top_candidates:
+            entry = cand["entry"]
+            url = entry.get("link", "")
+            fetch_tasks.append(self._fetch_article_content(url))
+
+        # Wait for all fetches
+        contents = await asyncio.gather(*fetch_tasks)
+
+        for i, cand in enumerate(top_candidates):
+            entry = cand["entry"]
+            content_text = contents[i]
 
             published = None
             if entry.get("published_parsed"):
@@ -83,23 +138,22 @@ class HackerNewsCollector(BaseCollector):
                 except:
                     pass
 
+            # Combine meta info with fetched content
+            full_summary = f"Points: {cand['points']}, Comments: {cand['comments']}\n\nArticle Content:\n{content_text}"
+
             item = NewsItem(
-                title=title,
+                title=entry.get("title", ""),
                 url=entry.get("link", ""),
                 source="Hacker News",
                 category="social",
                 published=published,
-                summary=f"{points} points, {comments} comments",
-                score=points,
+                summary=full_summary, # Pass full content to summarizer
+                content=content_text, # Also store in content field
+                score=cand["points"],
             )
             items.append(item)
 
-            if len(items) >= self.max_items:
-                break
-
-        # Sort by score
-        items.sort(key=lambda x: x.score, reverse=True)
-        print(f"[HN] Collected {len(items)} items")
+        print(f"[HN] Collected {len(items)} items with content")
         return items
 
 
