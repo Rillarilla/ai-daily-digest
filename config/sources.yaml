@@ -61,6 +61,14 @@ rss_sources:
     max_items: 10
     enabled: true
 
+  techmeme:
+    name: "Techmeme"
+    url: "https://www.techmeme.com/feed.xml"
+    category: "industry"
+    keywords: ["AI", "Artificial Intelligence", "Machine Learning", "LLM", "ChatGPT", "OpenAI", "Anthropic", "Google Gemini", "Claude", "DeepMind", "NVIDIA"]
+    max_items: 10
+    enabled: true
+
   # === 中文科技媒体 ===
   36kr_ai:
     name: "36氪 AI"
