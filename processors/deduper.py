@@ -33,7 +33,7 @@ def deduplicate_items(items: list[NewsItem]) -> list[NewsItem]:
 
 def filter_by_date(
     items: list[NewsItem],
-    days: float = 1.2
+    days: float = 1.0
 ) -> list[NewsItem]:
     """Filter items to only include recent ones."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
