@@ -271,3 +271,10 @@ publishers:
     enabled: true
     title_format: "🤖 AI Daily Digest - {date}"
     # Credentials (FEISHU_APP_ID, FEISHU_APP_SECRET) loaded from env vars
+
+  feishu_bot:
+    enabled: true
+    # Target chat ID (group ID starting with oc_) loaded from FEISHU_BOT_CHAT_ID
+    # or can be set here directly if not secret
+    chat_id: ""
+    title_format: "🤖 AI Daily Digest - {date}"

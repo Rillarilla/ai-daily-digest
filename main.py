@@ -187,6 +187,17 @@ async def main_async():
                 doc_url = await publisher.publish(title, md_content)
                 if doc_url:
                     print(f"   Document available at: {doc_url}")
+
+                # Publish to Feishu Bot (Push)
+                bot_config = publishers_config.get("feishu_bot", {})
+                if bot_config.get("enabled", False):
+                    chat_id = bot_config.get("chat_id") or os.environ.get("FEISHU_BOT_CHAT_ID")
+                    if chat_id:
+                        print(f"\n🤖 Pushing to Feishu Bot (Chat ID: {chat_id})...")
+                        # Pass categories and category_names to build the card
+                        await publisher.send_digest_card(chat_id, title, highlights, categories, category_names)
+                    else:
+                        print("   ⚠️ Feishu bot enabled but FEISHU_BOT_CHAT_ID not set")
             else:
                 print("   ⚠️ Feishu publisher enabled but credentials not found (FEISHU_APP_ID/SECRET)")
 
