@@ -37,6 +37,8 @@ def filter_by_date(
 ) -> list[NewsItem]:
     """Filter items to only include recent ones."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    # Allow longer window for papers (ArXiv often has delays)
+    paper_cutoff = datetime.now(timezone.utc) - timedelta(days=3.0)
 
     filtered = []
     for item in items:
@@ -45,7 +47,11 @@ def filter_by_date(
             pub_date = item.published
             if pub_date.tzinfo is None:
                 pub_date = pub_date.replace(tzinfo=timezone.utc)
-            if pub_date >= cutoff:
+
+            # Use specific cutoff for papers, strict cutoff for others
+            target_cutoff = paper_cutoff if item.category == 'papers' else cutoff
+
+            if pub_date >= target_cutoff:
                 filtered.append(item)
         else:
             # Include items without date (might be recent)

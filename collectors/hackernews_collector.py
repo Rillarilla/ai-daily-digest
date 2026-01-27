@@ -128,6 +128,11 @@ class HackerNewsCollector(BaseCollector):
             entry = cand["entry"]
             content_text = contents[i]
 
+            # Skip if content fetching failed or content is too short (likely just boilerplate)
+            if not content_text or len(content_text) < 100:
+                print(f"[HN] Skipped item due to missing/short content: {entry.get('title')}")
+                continue
+
             published = None
             if entry.get("published_parsed"):
                 try:

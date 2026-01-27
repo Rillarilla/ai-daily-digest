@@ -65,7 +65,7 @@ rss_sources:
     name: "Techmeme"
     url: "https://www.techmeme.com/feed.xml"
     category: "industry"
-    keywords: ["AI", "Artificial Intelligence", "Machine Learning", "LLM", "ChatGPT", "OpenAI", "Anthropic", "Google Gemini", "Claude", "DeepMind", "NVIDIA"]
+    keywords: ["LLM", "ChatGPT", "OpenAI", "Anthropic", "Gemini", "Claude", "DeepMind", "NVIDIA", "Generative AI", "Transformer", "Foundation Model"]
     max_items: 10
     enabled: true
 
