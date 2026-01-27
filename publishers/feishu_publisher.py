@@ -73,11 +73,13 @@ class FeishuPublisher:
                     raise Exception(f"Create Doc Error: {data.get('msg')}")
 
                 # Drive API returns 'file_token' inside 'file', Docx API returns 'document_id' inside 'document'
-                if "file" in data: # Drive API response
+                # Both are nested inside 'data'
+                res_data = data.get("data", {})
+                if "file" in res_data: # Drive API response
                     # For Docx created via Drive API, file_token == document_id
-                    return data["data"]["file"]["token"]
-                elif "document" in data: # Docx API response
-                    return data["data"]["document"]["document_id"]
+                    return res_data["file"]["token"]
+                elif "document" in res_data: # Docx API response
+                    return res_data["document"]["document_id"]
                 else:
                     raise Exception(f"Unknown response format: {data}")
 
