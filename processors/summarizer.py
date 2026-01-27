@@ -89,24 +89,33 @@ class GeminiSummarizer:
 来源：{item.source}
 内容：{content_to_summarize}
 
-要求：
-1. **直接用中文输出**，不要先生成英文再翻译。
-2. **标题**：翻译成中文，保持原意。
-3. **摘要**：
+你的任务是：
+1. **严格筛选**：这条新闻是否与**泛AI技术、产品、应用或行业动态**直接相关？
+   - 关注：AI模型(LLM)、生成式AI(AIGC)、机器学习(ML)、AI硬件(GPU/芯片)、AI应用(如ChatGPT, Claude, Copilot)、自动驾驶、机器人等。
+   - **过滤**：如果只是普通的科技、政治、社会新闻（如枪击案、税收政策、普通手机发布）且**没有核心AI技术成分**，请**直接返回 "IRRELEVANT"**。
+2. **提取与总结**（如果相关）：
    - 用中文撰写，长度约100-150字。
    - 内容要详细，包含核心事实、数据、影响或关键结论。
    - 避免泛泛而谈，提取具体信息。
-4. **格式**：
-   - 第一行：中文标题 (不要包含"标题："前缀)
-   - 第二行开始：中文摘要
 
-请直接返回结果，不要包含任何其他解释。"""
+要求：
+- 直接返回结果，不要包含任何前缀（如"中文标题："）。
+- 格式：
+  第一行：中文标题
+  第二行开始：中文摘要
+- 如果无关，仅返回 "IRRELEVANT"。"""
 
             try:
                 async with self.semaphore:
                     response = await self.model.generate_content_async(prompt)
                 lines = response.text.strip().split('\n')
-                if len(lines) >= 2:
+
+                # Check for IRRELEVANT response
+                if len(lines) > 0 and "IRRELEVANT" in lines[0]:
+                    title = item.title
+                    summary = "IRRELEVANT"
+                    is_translated = False
+                elif len(lines) >= 2:
                     # 清理可能的前缀
                     raw_title = lines[0].strip()
                     title = re.sub(r'^(中文)?标题[:：]\s*', '', raw_title).strip()
@@ -125,6 +134,12 @@ class GeminiSummarizer:
                             summary = "暂无详细内容"
 
                     is_translated = True
+                else:
+                    # Fallback if format is unexpected but not irrelevant
+                    title = item.title
+                    summary = response.text.strip()
+                    is_translated = False
+
             except Exception as e:
                 print(f"Translate & summarize error: {e}")
 
@@ -201,16 +216,16 @@ class GeminiSummarizer:
 1. 用中文撰写
 2. 3-5个要点
 3. 每个要点1-2句话，独立成段
-4. 突出最重要、最具影响力的动态
-5. 如果有重大发布/融资/突破，优先提及
+4. **务必保证句子完整**，不要截断。
+5. 突出最重要、最具影响力的动态
 6. 风格：专业但易读，像给同事的早间简报
 
 请按以下格式输出（每个要点独立一段，用数字开头）：
-1. 第一个要点内容...
+1. 第一个要点内容（完整句子）。
 
-2. 第二个要点内容...
+2. 第二个要点内容（完整句子）。
 
-3. 第三个要点内容..."""
+3. 第三个要点内容（完整句子）。"""
 
         try:
             async with self.semaphore:

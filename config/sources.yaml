@@ -49,7 +49,7 @@ rss_sources:
     name: "TechCrunch AI"
     url: "https://techcrunch.com/category/artificial-intelligence/feed/"
     category: "industry"
-    keywords: []  # Accept all AI news, not just funding
+    keywords: []  # Rely on LLM filtering for relevance
     max_items: 15
     enabled: true
 
@@ -65,7 +65,7 @@ rss_sources:
     name: "Techmeme"
     url: "https://www.techmeme.com/feed.xml"
     category: "industry"
-    keywords: ["LLM", "ChatGPT", "OpenAI", "Anthropic", "Gemini", "Claude", "DeepMind", "NVIDIA", "Generative AI", "Transformer", "Foundation Model"]
+    keywords: []  # Rely on LLM filtering
     max_items: 10
     enabled: true
 

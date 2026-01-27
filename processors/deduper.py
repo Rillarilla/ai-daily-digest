@@ -89,7 +89,7 @@ def group_by_category(
 def process_items(
     items: list[NewsItem],
     max_per_category: int = 5,
-    days: float = 1.2  # Reduced from 7 to 1.2 (approx 29 hours) for strict daily filtering
+    days: float = 1.0  # Reduced to 1.0 (24 hours) for strict daily filtering
 ) -> dict[str, list[NewsItem]]:
     """Full processing pipeline: dedupe, filter, sort, group."""
     # Deduplicate
