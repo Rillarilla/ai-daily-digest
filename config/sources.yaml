@@ -264,3 +264,10 @@ output:
     podcast: "🎙️ 播客更新"
     social: "🐦 社交热议"
     china: "🇨🇳 国内动态"
+
+# 发布渠道配置
+publishers:
+  feishu:
+    enabled: true
+    title_format: "🤖 AI Daily Digest - {date}"
+    # Credentials (FEISHU_APP_ID, FEISHU_APP_SECRET) loaded from env vars

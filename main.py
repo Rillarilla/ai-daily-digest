@@ -26,6 +26,7 @@ from collectors import (
 )
 from processors import GeminiSummarizer, process_items
 from email_sender import send_digest_email
+from publishers.feishu_publisher import FeishuPublisher
 
 
 def load_config(config_path: str = "config/sources.yaml") -> dict:
@@ -140,6 +141,55 @@ async def main_async():
 
     if success:
         print("\n✅ Daily digest sent successfully!")
+
+        # Publish to Feishu if enabled
+        publishers_config = config.get("publishers", {})
+        feishu_config = publishers_config.get("feishu", {})
+
+        if feishu_config.get("enabled", False):
+            print("\n🚀 Publishing to Feishu...")
+            publisher = FeishuPublisher()
+            if publisher.is_configured():
+                # Construct Markdown content
+                date_str = datetime.now().strftime("%Y-%m-%d")
+                title = feishu_config.get("title_format", "AI Daily Digest - {date}").format(date=date_str)
+
+                md_content = ""
+                if highlights:
+                    md_content += "## ⚡ 今日要点\n\n"
+                    # Highlights is already formatted HTML-ish/text mixed, let's clean it or use it.
+                    # The summarizer returns HTML div/span blocks now. We need text for Feishu.
+                    # Actually, summarizer.generate_daily_highlights returns HTML string.
+                    # We might need to strip HTML for Feishu markdown.
+                    # Quick hack: use regex to strip tags for now.
+                    import re
+                    clean_highlights = re.sub(r'<[^>]+>', '', highlights).strip()
+                    # Fix spacing
+                    clean_highlights = re.sub(r'\n\s*\n', '\n\n', clean_highlights)
+                    md_content += clean_highlights + "\n\n"
+
+                for cat_id in output_config.get("category_order", []):
+                    if cat_id not in categories or not categories[cat_id]:
+                        continue
+
+                    cat_name = category_names.get(cat_id, cat_id)
+                    md_content += f"## {cat_name}\n\n"
+
+                    for item in categories[cat_id]:
+                        md_content += f"### [{item.title}]({item.url})\n"
+                        md_content += f"- 来源: {item.source}\n"
+                        if item.summary:
+                             # Clean summary of HTML if any
+                             clean_summary = re.sub(r'<[^>]+>', '', item.summary).strip()
+                             md_content += f"- 摘要: {clean_summary}\n"
+                        md_content += "\n"
+
+                doc_url = await publisher.publish(title, md_content)
+                if doc_url:
+                    print(f"   Document available at: {doc_url}")
+            else:
+                print("   ⚠️ Feishu publisher enabled but credentials not found (FEISHU_APP_ID/SECRET)")
+
         return 0
     else:
         print("\n❌ Failed to send email. Check SMTP configuration.")
