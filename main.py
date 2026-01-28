@@ -191,11 +191,18 @@ async def main_async():
                 # Publish to Feishu Bot (Push)
                 bot_config = publishers_config.get("feishu_bot", {})
                 if bot_config.get("enabled", False):
-                    chat_id = bot_config.get("chat_id") or os.environ.get("FEISHU_BOT_CHAT_ID")
-                    if chat_id:
-                        print(f"\n🤖 Pushing to Feishu Bot (Chat ID: {chat_id})...")
-                        # Pass categories and category_names to build the card
-                        await publisher.send_digest_card(chat_id, title, highlights, categories, category_names)
+                    chat_id_str = bot_config.get("chat_id") or os.environ.get("FEISHU_BOT_CHAT_ID")
+                    if chat_id_str:
+                        # Support multiple chat IDs separated by comma
+                        chat_ids = [cid.strip() for cid in chat_id_str.split(',') if cid.strip()]
+
+                        if chat_ids:
+                            print(f"\n🤖 Pushing to {len(chat_ids)} Feishu Bot Group(s)...")
+                            for cid in chat_ids:
+                                # Pass categories and category_names to build the card
+                                await publisher.send_digest_card(cid, title, highlights, categories, category_names)
+                        else:
+                            print("   ⚠️ Feishu bot enabled but no valid chat IDs found")
                     else:
                         print("   ⚠️ Feishu bot enabled but FEISHU_BOT_CHAT_ID not set")
             else:
