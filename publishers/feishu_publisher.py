@@ -4,16 +4,24 @@ import re
 import json
 import asyncio
 import aiohttp
-from datetime import datetime
+from datetime import datetime, timedelta
+from pathlib import Path
 
 class FeishuPublisher:
     """Publish content to Feishu (Lark) Cloud Documents."""
 
     BASE_URL = "https://open.feishu.cn/open-apis"
+    # Document admin - will be granted full access to all created documents
+    ADMIN_OPEN_ID = "ou_a56b76d66880b915708fab278df0c527"
+    # Document retention period in days
+    RETENTION_DAYS = 180
+    # Path to store document records
+    DOCUMENTS_DB = Path(__file__).parent.parent / "data" / "documents.json"
 
     def __init__(self):
         self.app_id = os.environ.get("FEISHU_APP_ID")
         self.app_secret = os.environ.get("FEISHU_APP_SECRET")
+        # Folder token (optional, not used if can't add app as collaborator)
         self.folder_token = os.environ.get("FEISHU_FOLDER_TOKEN")
         self._tenant_access_token = None
         self._token_expiry = 0
@@ -46,6 +54,121 @@ class FeishuPublisher:
                 # Expires in 2 hours, refresh slightly earlier
                 self._token_expiry = datetime.now().timestamp() + data["expire"] - 300
                 return self._tenant_access_token
+
+    async def set_document_public_permission(self, doc_token: str, chat_id: str = None) -> bool:
+        """Set document permission to allow group members to read and add admin.
+
+        Args:
+            doc_token: The document token/id
+            chat_id: Optional chat_id to add as collaborator
+
+        Returns:
+            True if successful, False otherwise
+        """
+        token = await self._get_tenant_access_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        members_url = f"{self.BASE_URL}/drive/v1/permissions/{doc_token}/members?type=docx&need_notification=false"
+        success = False
+
+        # Add admin user with full access
+        if self.ADMIN_OPEN_ID:
+            admin_payload = {
+                "member_type": "openid",
+                "member_id": self.ADMIN_OPEN_ID,
+                "perm": "full_access"
+            }
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(members_url, json=admin_payload, headers=headers) as response:
+                        data = await response.json()
+                        if data.get("code") == 0:
+                            print(f"   ✅ Added admin with full_access")
+                            success = True
+                        else:
+                            print(f"   ⚠️ Add admin warning: {data.get('msg', '')}")
+            except Exception as e:
+                print(f"   ⚠️ Add admin error: {e}")
+
+        # Add chat group as viewer
+        if chat_id:
+            member_payload = {
+                "member_type": "openchat",
+                "member_id": chat_id,
+                "perm": "view"
+            }
+
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(members_url, json=member_payload, headers=headers) as response:
+                        data = await response.json()
+                        if data.get("code") == 0:
+                            print(f"   ✅ Added chat group as document viewer")
+                            success = True
+                        else:
+                            error_msg = data.get('msg', '')
+                            print(f"   ⚠️ Add chat member warning: {error_msg}")
+            except Exception as e:
+                print(f"   ⚠️ Add member error: {e}")
+
+        return success
+
+    async def delete_document(self, doc_token: str) -> bool:
+        """Delete a document by its token.
+
+        Args:
+            doc_token: The document token/id to delete
+
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        token = await self._get_tenant_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        url = f"{self.BASE_URL}/drive/v1/files/{doc_token}?type=docx"
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.delete(url, headers=headers) as response:
+                    data = await response.json()
+                    if data.get("code") == 0:
+                        print(f"   ✅ Deleted document: {doc_token}")
+                        return True
+                    else:
+                        print(f"   ❌ Delete failed: {data.get('msg', '')}")
+                        return False
+        except Exception as e:
+            print(f"   ❌ Delete error: {e}")
+            return False
+
+    async def list_app_documents(self) -> list:
+        """List all documents created by this app.
+
+        Returns:
+            List of document info dicts
+        """
+        token = await self._get_tenant_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # List files in app's root folder
+        url = f"{self.BASE_URL}/drive/v1/files?folder_token=&order_by=EditedTime&direction=DESC&page_size=50"
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers) as response:
+                    data = await response.json()
+                    if data.get("code") == 0:
+                        files = data.get("data", {}).get("files", [])
+                        return files
+                    else:
+                        print(f"   ⚠️ List files error: {data.get('msg', '')}")
+                        return []
+        except Exception as e:
+            print(f"   ⚠️ List error: {e}")
+            return []
 
     async def create_document(self, title: str) -> str:
         """Create a new Docx and return its document_id."""
@@ -123,28 +246,15 @@ class FeishuPublisher:
         """Create a block object with text elements handling links."""
         # Simple link parsing: [text](url)
         elements = []
-
-        # Split by link pattern
         pattern = r'\[([^\]]+)\]\(([^)]+)\)'
-        parts = re.split(pattern, text)
-        matches = re.findall(pattern, text)
 
-        current_match_idx = 0
-
-        for part in parts:
-            if not part: continue
-
-            # Check if this part matches a link text or url we just extracted
-            # This is a bit tricky with re.split, let's just rebuild elements linearly
-            pass
-
-        # Better approach: Iterate and find links
+        # Iterate and find links
         last_idx = 0
         for match in re.finditer(pattern, text):
             # Text before link
             if match.start() > last_idx:
                 elements.append({
-                    "text_element": {
+                    "text_run": {
                         "content": text[last_idx:match.start()]
                     }
                 })
@@ -153,12 +263,10 @@ class FeishuPublisher:
             link_text = match.group(1)
             link_url = match.group(2)
             elements.append({
-                "text_element": {
+                "text_run": {
                     "content": link_text,
-                    "text_run": {
-                        "style": {
-                            "link": {"url": link_url}
-                        }
+                    "text_element_style": {
+                        "link": {"url": link_url}
                     }
                 }
             })
@@ -168,30 +276,20 @@ class FeishuPublisher:
         # Remaining text
         if last_idx < len(text):
             elements.append({
-                "text_element": {
+                "text_run": {
                     "content": text[last_idx:]
                 }
             })
 
-        # Default block structure
-        block = {
-            "block_type": block_type,
-            "text": {
-                "elements": elements
-            }
-        }
+        # If no elements were created (empty text), add empty text_run
+        if not elements:
+            elements.append({
+                "text_run": {
+                    "content": text
+                }
+            })
 
-        # Adjust structure based on block type (Feishu API idiosyncrasies)
-        # Actually for v1 API, the key is specific to block type name, e.g. "heading1", "ordered"
-        # But wait, create_docx_block_children API uses a specific structure.
-        # Let's double check the structure.
-
-        # Re-checking documentation from memory/search:
-        # POST /docx/v1/documents/:document_id/blocks/:block_id/children
-        # Payload: {"children": [{ "block_type": 2, "text": { "elements": [...] } }]}
-        # Actually keys are: "text", "heading1", "heading2", "bullet", "ordered"
-        # Not generic "text" for all.
-
+        # Block type to key mapping
         type_mapping = {
             2: "text",
             3: "heading1",
@@ -228,8 +326,14 @@ class FeishuPublisher:
                     if data.get("code") != 0:
                         print(f"Error writing blocks batch {i}: {data.get('msg')}")
 
-    async def publish(self, title: str, markdown_content: str) -> str:
-        """Main method: Create doc and write content."""
+    async def publish(self, title: str, markdown_content: str, chat_id: str = None) -> str:
+        """Main method: Create doc and write content.
+
+        Args:
+            title: Document title
+            markdown_content: Content in markdown format
+            chat_id: Optional chat_id to grant read permission
+        """
         if not self.is_configured():
             print("Feishu publisher not configured (missing APP_ID/SECRET)")
             return None
@@ -238,19 +342,100 @@ class FeishuPublisher:
             print(f"Creating Feishu document: {title}...")
             doc_id = await self.create_document(title)
 
+            # Set document permission - try to add chat group as viewer
+            print("Setting document permissions...")
+            await self.set_document_public_permission(doc_id, chat_id)
+
             print("Parsing content...")
             blocks = self._markdown_to_blocks(markdown_content)
 
             print(f"Writing {len(blocks)} blocks to document...")
             await self.write_content(doc_id, blocks)
 
-            doc_url = f"https://open.feishu.cn/docs/{doc_id}" # Or appropriate tenant domain
+            # Use the correct user-accessible document URL format
+            doc_url = f"https://feishu.cn/docx/{doc_id}"
             print(f"✅ Published to Feishu: {doc_url}")
+
+            # Record document for future cleanup
+            self._record_document(doc_id, title)
+
             return doc_url
 
         except Exception as e:
             print(f"❌ Feishu Publish Error: {e}")
             return None
+
+    def _record_document(self, doc_token: str, title: str):
+        """Record document info for future cleanup."""
+        try:
+            # Ensure data directory exists
+            self.DOCUMENTS_DB.parent.mkdir(parents=True, exist_ok=True)
+
+            # Load existing records
+            if self.DOCUMENTS_DB.exists():
+                with open(self.DOCUMENTS_DB, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            else:
+                data = {"documents": []}
+
+            # Add new record
+            data["documents"].append({
+                "token": doc_token,
+                "title": title,
+                "created_at": datetime.now().isoformat()
+            })
+
+            # Save
+            with open(self.DOCUMENTS_DB, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+        except Exception as e:
+            print(f"   ⚠️ Failed to record document: {e}")
+
+    async def cleanup_old_documents(self) -> int:
+        """Delete documents older than RETENTION_DAYS.
+
+        Returns:
+            Number of documents deleted
+        """
+        if not self.DOCUMENTS_DB.exists():
+            return 0
+
+        try:
+            with open(self.DOCUMENTS_DB, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"   ⚠️ Failed to load document records: {e}")
+            return 0
+
+        cutoff_date = datetime.now() - timedelta(days=self.RETENTION_DAYS)
+        deleted_count = 0
+        remaining_docs = []
+
+        for doc in data.get("documents", []):
+            created_at = datetime.fromisoformat(doc["created_at"])
+
+            if created_at < cutoff_date:
+                # Delete old document
+                print(f"   🗑️ Cleaning up old document: {doc['title']}")
+                success = await self.delete_document(doc["token"])
+                if success:
+                    deleted_count += 1
+                else:
+                    # Keep in list if deletion failed
+                    remaining_docs.append(doc)
+            else:
+                remaining_docs.append(doc)
+
+        # Update records
+        data["documents"] = remaining_docs
+        with open(self.DOCUMENTS_DB, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        if deleted_count > 0:
+            print(f"   ✅ Cleaned up {deleted_count} old documents")
+
+        return deleted_count
 
     async def _send_message(self, receive_id: str, msg_type: str, content: str):
         """Send a message via Feishu IM API."""
@@ -274,11 +459,19 @@ class FeishuPublisher:
                 else:
                     print(f"✅ Feishu message sent to {receive_id}")
 
-    def _build_card_content(self, title: str, highlights: str, categories: dict, category_names: dict) -> str:
-        """Construct Feishu Interactive Card JSON content."""
+    def _build_card_content(self, title: str, highlights: str, categories: dict, category_names: dict, doc_url: str = None) -> str:
+        """Construct Feishu Interactive Card JSON content.
+
+        Args:
+            title: Card title
+            highlights: Today's highlights text (top 3 eye-catching items)
+            categories: Dict of category -> list of NewsItem (unused in simplified card)
+            category_names: Dict of category_id -> display name (unused in simplified card)
+            doc_url: Optional URL to the full document for click-through
+        """
         elements = []
 
-        # 1. Highlights Module
+        # Only show highlights - top 3 eye-catching items
         if highlights:
             # Clean HTML tags if present (simple regex)
             clean_highlights = re.sub(r'<[^>]+>', '', highlights).strip()
@@ -286,59 +479,27 @@ class FeishuPublisher:
                 "tag": "div",
                 "text": {
                     "tag": "lark_md",
-                    "content": f"**⚡ 今日要点**\n{clean_highlights}"
+                    "content": f"**⚡ 今日要点**\n\n{clean_highlights}"
                 }
             })
+
+        # Action button to view full document (if doc_url provided)
+        if doc_url:
             elements.append({"tag": "hr"})
-
-        # 2. Categories Modules
-        # Feishu cards have a size limit, so we might need to be careful with length.
-        # But for a digest, it should be fine.
-
-        # Order matters
-        cat_order = ["big_tech", "papers", "newsletter", "industry", "podcast", "social", "china"]
-
-        for cat_id in cat_order:
-            if cat_id not in categories or not categories[cat_id]:
-                continue
-
-            items = categories[cat_id]
-            cat_name = category_names.get(cat_id, cat_id)
-
-            # Category Header
             elements.append({
-                "tag": "div",
-                "text": {
-                    "tag": "lark_md",
-                    "content": f"**{cat_name}** ({len(items)})"
-                }
+                "tag": "action",
+                "actions": [
+                    {
+                        "tag": "button",
+                        "text": {
+                            "tag": "plain_text",
+                            "content": "📖 查看完整内容"
+                        },
+                        "type": "primary",
+                        "url": doc_url
+                    }
+                ]
             })
-
-            # List items (Title + Link)
-            # Using a single text block for the list to save space
-            list_content = ""
-            for item in items:
-                # Clean summary
-                summary = item.summary or ""
-                summary = re.sub(r'<[^>]+>', '', summary).strip()[:60] + "..." if len(summary) > 60 else summary
-
-                # Format: [Title](URL)
-                list_content += f"• [{item.title}]({item.url})\n"
-                # Optional: Add small summary? Might make card too long.
-                # Let's keep it title-only for the push, detailed reading in doc/email.
-
-            elements.append({
-                "tag": "div",
-                "text": {
-                    "tag": "lark_md",
-                    "content": list_content.strip()
-                }
-            })
-            elements.append({"tag": "hr"})
-
-        # Remove last hr
-        if elements and elements[-1]["tag"] == "hr":
-            elements.pop()
 
         # Footer / Note
         elements.append({
@@ -367,13 +528,22 @@ class FeishuPublisher:
 
         return json.dumps(card)
 
-    async def send_digest_card(self, chat_id: str, title: str, highlights: str, categories: dict, category_names: dict):
-        """Send the news digest as an interactive card."""
+    async def send_digest_card(self, chat_id: str, title: str, highlights: str, categories: dict, category_names: dict, doc_url: str = None):
+        """Send the news digest as an interactive card.
+
+        Args:
+            chat_id: Feishu chat ID to send to
+            title: Card title
+            highlights: Today's highlights text
+            categories: Dict of category -> list of NewsItem
+            category_names: Dict of category_id -> display name
+            doc_url: Optional URL to the full document for click-through
+        """
         if not self.is_configured():
              print("Feishu publisher not configured.")
              return
 
         print(f"Sending Feishu card to {chat_id}...")
-        card_content = self._build_card_content(title, highlights, categories, category_names)
+        card_content = self._build_card_content(title, highlights, categories, category_names, doc_url)
         await self._send_message(chat_id, "interactive", card_content)
 

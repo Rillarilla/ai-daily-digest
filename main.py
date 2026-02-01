@@ -188,10 +188,6 @@ async def main_async():
                              md_content += f"- 摘要: {clean_summary}\n"
                         md_content += "\n"
 
-                doc_url = await publisher.publish(title, md_content)
-                if doc_url:
-                    print(f"   Document available at: {doc_url}")
-
                 # Publish to Feishu Bot (Push)
                 bot_config = publishers_config.get("feishu_bot", {})
                 if bot_config.get("enabled", False):
@@ -201,10 +197,20 @@ async def main_async():
                         chat_ids = [cid.strip() for cid in chat_id_str.split(',') if cid.strip()]
 
                         if chat_ids:
+                            # Create document with first chat_id for permission granting
+                            first_chat_id = chat_ids[0]
+                            doc_url = await publisher.publish(title, md_content, first_chat_id)
+                            if doc_url:
+                                print(f"   Document available at: {doc_url}")
+
                             print(f"\n🤖 Pushing to {len(chat_ids)} Feishu Bot Group(s)...")
                             for cid in chat_ids:
-                                # Pass categories and category_names to build the card
-                                await publisher.send_digest_card(cid, title, highlights, categories, category_names)
+                                # Pass categories, category_names, and doc_url to build the card with click-through
+                                await publisher.send_digest_card(cid, title, highlights, categories, category_names, doc_url)
+
+                            # Cleanup old documents (older than 180 days)
+                            print("\n🧹 Checking for old documents to clean up...")
+                            await publisher.cleanup_old_documents()
                         else:
                             print("   ⚠️ Feishu bot enabled but no valid chat IDs found")
                     else:
