@@ -184,31 +184,7 @@ async def main_async():
                             if doc_url:
                                 print(f"   PDF available at: {doc_url}")
                         else:
-                            # Fallback to document if PDF not available
-                            import re
-                            md_content = ""
-                            if highlights:
-                                md_content += "## ⚡ 今日要点\n\n"
-                                clean_highlights = re.sub(r'<[^>]+>', '', highlights).strip()
-                                clean_highlights = re.sub(r'\n\s*\n', '\n\n', clean_highlights)
-                                md_content += clean_highlights + "\n\n"
-
-                            for cat_id in output_config.get("category_order", []):
-                                if cat_id not in categories or not categories[cat_id]:
-                                    continue
-                                cat_name = category_names.get(cat_id, cat_id)
-                                md_content += f"## {cat_name}\n\n"
-                                for item in categories[cat_id]:
-                                    md_content += f"### [{item.title}]({item.url})\n"
-                                    md_content += f"- 来源: {item.source}\n"
-                                    if item.summary:
-                                        clean_summary = re.sub(r'<[^>]+>', '', item.summary).strip()
-                                        md_content += f"- 摘要: {clean_summary}\n"
-                                    md_content += "\n"
-
-                            doc_url = await publisher.publish(title, md_content, first_chat_id)
-                            if doc_url:
-                                print(f"   Document available at: {doc_url}")
+                            print("   ⚠️ PDF not available, skipping Feishu upload")
 
                         print(f"\n🤖 Pushing to {len(chat_ids)} Feishu Bot Group(s)...")
                         for cid in chat_ids:
