@@ -48,6 +48,11 @@ jobs:
           FROM_EMAIL: ${{ secrets.SMTP_USER }}
           TO_EMAIL: rillahai@gmail.com
 
+          # Feishu Configuration
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_BOT_CHAT_ID: ${{ secrets.FEISHU_BOT_CHAT_ID }}
+
         run: |
           python main.py
 

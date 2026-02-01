@@ -13,6 +13,10 @@ from datetime import datetime
 from pathlib import Path
 
 import yaml
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if it exists
+load_dotenv()
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
