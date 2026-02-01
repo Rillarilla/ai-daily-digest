@@ -326,6 +326,157 @@ class FeishuPublisher:
                     if data.get("code") != 0:
                         print(f"Error writing blocks batch {i}: {data.get('msg')}")
 
+    async def upload_file(self, file_path: str, file_name: str = None, parent_type: str = "explorer") -> dict:
+        """Upload a file to Feishu Drive.
+
+        Args:
+            file_path: Local path to the file
+            file_name: Name for the uploaded file (defaults to original filename)
+            parent_type: Parent type, "explorer" for app root folder
+
+        Returns:
+            Dict with file_token and url, or None on failure
+        """
+        if not self.is_configured():
+            print("Feishu publisher not configured (missing APP_ID/SECRET)")
+            return None
+
+        token = await self._get_tenant_access_token()
+
+        if not file_name:
+            file_name = Path(file_path).name
+
+        # Get file size
+        file_size = Path(file_path).stat().st_size
+
+        url = f"{self.BASE_URL}/drive/v1/files/upload_all"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        try:
+            with open(file_path, "rb") as f:
+                # Use FormData for multipart upload
+                form_data = aiohttp.FormData()
+                form_data.add_field("file_name", file_name)
+                form_data.add_field("parent_type", parent_type)
+                form_data.add_field("parent_node", self.folder_token or "")
+                form_data.add_field("size", str(file_size))
+                form_data.add_field("file", f, filename=file_name, content_type="application/pdf")
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, data=form_data, headers=headers) as response:
+                        data = await response.json()
+                        if data.get("code") != 0:
+                            print(f"   ❌ Upload failed: {data.get('msg')}")
+                            return None
+
+                        file_token = data.get("data", {}).get("file_token")
+                        if file_token:
+                            file_url = f"https://feishu.cn/file/{file_token}"
+                            print(f"   ✅ File uploaded: {file_url}")
+                            return {"file_token": file_token, "url": file_url}
+                        return None
+
+        except Exception as e:
+            print(f"   ❌ Upload error: {e}")
+            return None
+
+    async def set_file_permission(self, file_token: str, chat_id: str = None) -> bool:
+        """Set file permission for chat group and admin.
+
+        Args:
+            file_token: The file token
+            chat_id: Optional chat_id to add as viewer
+
+        Returns:
+            True if successful
+        """
+        token = await self._get_tenant_access_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        members_url = f"{self.BASE_URL}/drive/v1/permissions/{file_token}/members?type=file&need_notification=false"
+        success = False
+
+        # Add admin user with full access
+        if self.ADMIN_OPEN_ID:
+            admin_payload = {
+                "member_type": "openid",
+                "member_id": self.ADMIN_OPEN_ID,
+                "perm": "full_access"
+            }
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(members_url, json=admin_payload, headers=headers) as response:
+                        data = await response.json()
+                        if data.get("code") == 0:
+                            print(f"   ✅ Added admin with full_access to file")
+                            success = True
+                        else:
+                            print(f"   ⚠️ Add admin to file warning: {data.get('msg', '')}")
+            except Exception as e:
+                print(f"   ⚠️ Add admin to file error: {e}")
+
+        # Add chat group as viewer
+        if chat_id:
+            member_payload = {
+                "member_type": "openchat",
+                "member_id": chat_id,
+                "perm": "view"
+            }
+
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(members_url, json=member_payload, headers=headers) as response:
+                        data = await response.json()
+                        if data.get("code") == 0:
+                            print(f"   ✅ Added chat group as file viewer")
+                            success = True
+                        else:
+                            print(f"   ⚠️ Add chat to file warning: {data.get('msg', '')}")
+            except Exception as e:
+                print(f"   ⚠️ Add chat to file error: {e}")
+
+        return success
+
+    async def upload_pdf(self, pdf_path: str, title: str, chat_id: str = None) -> str:
+        """Upload PDF and set permissions.
+
+        Args:
+            pdf_path: Local path to PDF file
+            title: Title for the file
+            chat_id: Chat ID for permission granting
+
+        Returns:
+            URL to access the PDF, or None on failure
+        """
+        if not self.is_configured():
+            print("Feishu publisher not configured (missing APP_ID/SECRET)")
+            return None
+
+        try:
+            print(f"📄 Uploading PDF to Feishu: {title}...")
+            result = await self.upload_file(pdf_path, f"{title}.pdf")
+
+            if not result:
+                return None
+
+            file_token = result["file_token"]
+
+            # Set permissions
+            print("   Setting file permissions...")
+            await self.set_file_permission(file_token, chat_id)
+
+            # Record for cleanup
+            self._record_document(file_token, title)
+
+            return result["url"]
+
+        except Exception as e:
+            print(f"❌ PDF Upload Error: {e}")
+            return None
+
     async def publish(self, title: str, markdown_content: str, chat_id: str = None) -> str:
         """Main method: Create doc and write content.
 

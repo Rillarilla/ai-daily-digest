@@ -29,7 +29,7 @@ from collectors import (
     NewsItem,
 )
 from processors import GeminiSummarizer, process_items
-from email_sender import send_digest_email
+from email_sender import send_digest_email, EmailSender, WEASYPRINT_AVAILABLE
 from publishers.feishu_publisher import FeishuPublisher
 
 
@@ -136,12 +136,21 @@ async def main_async():
     to_email = os.environ.get("TO_EMAIL", "rillahai@gmail.com")
     print(f"📧 Sending email to {to_email}...")
 
-    email_success = send_digest_email(
-        to_email=to_email,
-        categories=categories,
-        category_names=category_names,
-        highlights=highlights,
-    )
+    # Generate PDF for both email and Feishu
+    email_sender = EmailSender()
+    html_content = email_sender.render_email(categories, category_names, highlights)
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    pdf_path = None
+
+    if WEASYPRINT_AVAILABLE:
+        pdf_dir = Path(__file__).parent / "output"
+        pdf_dir.mkdir(exist_ok=True)
+        pdf_path = str(pdf_dir / f"AI_Daily_Digest_{date_str}.pdf")
+        email_sender.generate_pdf(html_content, pdf_path)
+
+    # Send email with PDF attachment
+    subject = f"🤖 AI Daily Digest - {datetime.now().strftime('%m/%d')}"
+    email_success = email_sender.send(to_email, subject, html_content, pdf_path)
 
     if email_success:
         print("✅ Email sent successfully!")
@@ -156,33 +165,7 @@ async def main_async():
         print("\n🚀 Publishing to Feishu...")
         publisher = FeishuPublisher()
         if publisher.is_configured():
-            # Construct Markdown content
-            date_str = datetime.now().strftime("%Y-%m-%d")
             title = feishu_config.get("title_format", "AI Daily Digest - {date}").format(date=date_str)
-
-            md_content = ""
-            if highlights:
-                md_content += "## ⚡ 今日要点\n\n"
-                import re
-                clean_highlights = re.sub(r'<[^>]+>', '', highlights).strip()
-                clean_highlights = re.sub(r'\n\s*\n', '\n\n', clean_highlights)
-                md_content += clean_highlights + "\n\n"
-
-            for cat_id in output_config.get("category_order", []):
-                if cat_id not in categories or not categories[cat_id]:
-                    continue
-
-                cat_name = category_names.get(cat_id, cat_id)
-                md_content += f"## {cat_name}\n\n"
-
-                for item in categories[cat_id]:
-                    md_content += f"### [{item.title}]({item.url})\n"
-                    md_content += f"- 来源: {item.source}\n"
-                    if item.summary:
-                         import re
-                         clean_summary = re.sub(r'<[^>]+>', '', item.summary).strip()
-                         md_content += f"- 摘要: {clean_summary}\n"
-                    md_content += "\n"
 
             # Publish to Feishu Bot (Push)
             bot_config = publishers_config.get("feishu_bot", {})
@@ -192,11 +175,40 @@ async def main_async():
                     chat_ids = [cid.strip() for cid in chat_id_str.split(',') if cid.strip()]
 
                     if chat_ids:
-                        # Create document with first chat_id for permission granting
                         first_chat_id = chat_ids[0]
-                        doc_url = await publisher.publish(title, md_content, first_chat_id)
-                        if doc_url:
-                            print(f"   Document available at: {doc_url}")
+                        doc_url = None
+
+                        # Upload PDF to Feishu (same content as email)
+                        if pdf_path and Path(pdf_path).exists():
+                            doc_url = await publisher.upload_pdf(pdf_path, title, first_chat_id)
+                            if doc_url:
+                                print(f"   PDF available at: {doc_url}")
+                        else:
+                            # Fallback to document if PDF not available
+                            import re
+                            md_content = ""
+                            if highlights:
+                                md_content += "## ⚡ 今日要点\n\n"
+                                clean_highlights = re.sub(r'<[^>]+>', '', highlights).strip()
+                                clean_highlights = re.sub(r'\n\s*\n', '\n\n', clean_highlights)
+                                md_content += clean_highlights + "\n\n"
+
+                            for cat_id in output_config.get("category_order", []):
+                                if cat_id not in categories or not categories[cat_id]:
+                                    continue
+                                cat_name = category_names.get(cat_id, cat_id)
+                                md_content += f"## {cat_name}\n\n"
+                                for item in categories[cat_id]:
+                                    md_content += f"### [{item.title}]({item.url})\n"
+                                    md_content += f"- 来源: {item.source}\n"
+                                    if item.summary:
+                                        clean_summary = re.sub(r'<[^>]+>', '', item.summary).strip()
+                                        md_content += f"- 摘要: {clean_summary}\n"
+                                    md_content += "\n"
+
+                            doc_url = await publisher.publish(title, md_content, first_chat_id)
+                            if doc_url:
+                                print(f"   Document available at: {doc_url}")
 
                         print(f"\n🤖 Pushing to {len(chat_ids)} Feishu Bot Group(s)...")
                         for cid in chat_ids:
