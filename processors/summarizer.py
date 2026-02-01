@@ -51,18 +51,23 @@ class GeminiSummarizer:
 
     async def translate_to_chinese(self, text: str) -> str:
         """将英文文本翻译成中文。"""
-        if not text or not is_english(text):
+        if not text:
+            return ""
+
+        # 简单长度检查，如果太短可能不需要翻译或API开销不值得
+        if len(text) < 5:
             return text
 
-        prompt = f"""请将以下英文内容翻译成简洁的中文：
+        prompt = f"""You are a professional translator. Translate the following text to Simplified Chinese (简体中文).
 
+Text:
 {text}
 
-要求：
-- 保持原意，译文流畅自然
-- 专业术语保留英文（如：GPT、LLM、Transformer等）
-- 不要添加任何解释或额外内容
-- 直接返回翻译结果"""
+Requirements:
+- Output ONLY the translated text.
+- No explanations, no quotes.
+- Keep technical terms in English (e.g. LLM, GPT, Transformer).
+- Keep it concise."""
 
         try:
             async with self.semaphore:
@@ -78,112 +83,125 @@ class GeminiSummarizer:
         summary = item.summary or ""
         is_translated = False
 
-        # 如果是英文内容，翻译标题和摘要
-        if is_english(title) or is_english(summary):
-            # 优先使用完整内容进行总结
-            content_to_summarize = item.content if item.content and len(item.content) > len(item.summary or "") else (item.summary or "无")
+        # 优先使用完整内容进行总结
+        content_to_summarize = item.content if item.content and len(item.content) > len(item.summary or "") else (item.summary or "无")
 
-            prompt = f"""请阅读以下新闻，并用中文撰写一个详细的摘要：
+        # 限制输入长度，避免token溢出
+        if len(content_to_summarize) > 10000:
+             content_to_summarize = content_to_summarize[:10000] + "..."
 
-标题：{item.title}
-来源：{item.source}
-内容：{content_to_summarize}
+        prompt = f"""Analyze this news item and write a summary in Simplified Chinese.
 
-你的任务是：
-1. **严格筛选**：这条新闻是否与**泛AI技术、产品、应用或行业动态**直接相关？
-   - 关注：AI模型(LLM)、生成式AI(AIGC)、机器学习(ML)、AI硬件(GPU/芯片)、AI应用(如ChatGPT, Claude, Copilot)、自动驾驶、机器人等。
-   - **过滤**：如果只是普通的科技、政治、社会新闻（如枪击案、税收政策、普通手机发布）且**没有核心AI技术成分**，请**直接返回 "IRRELEVANT"**。
-2. **提取与总结**（如果相关）：
-   - 用中文撰写，长度约100-150字。
-   - 内容要详细，包含核心事实、数据、影响或关键结论。
-   - 避免泛泛而谈，提取具体信息。
+Title: {item.title}
+Source: {item.source}
+Content: {content_to_summarize}
 
-要求：
-- 直接返回结果，不要包含任何前缀（如"中文标题："）。
-- 格式：
-  第一行：中文标题
-  第二行开始：中文摘要
-- 如果无关，仅返回 "IRRELEVANT"。"""
+Task:
+1. **Filter**: Is this related to AI, LLMs, Machine Learning, or Tech Industry?
+   - If NOT related (e.g. general politics, crime, sports), return "IRRELEVANT".
+2. **Summarize**: Write a concise summary in **Simplified Chinese (简体中文)**.
+   - Length: **50-100 words** (strictly < 200 characters).
+   - Focus on: What happened? Why it matters? Key facts/numbers.
+   - Tone: Professional, objective news style.
 
-            try:
-                async with self.semaphore:
-                    response = await self.model.generate_content_async(prompt)
-                lines = response.text.strip().split('\n')
+Format:
+Line 1: [Chinese Title]
+Line 2: [Chinese Summary]
 
-                # Check for IRRELEVANT response
-                if len(lines) > 0 and "IRRELEVANT" in lines[0]:
-                    title = item.title
-                    summary = "IRRELEVANT"
-                    is_translated = False
-                elif len(lines) >= 2:
-                    # 清理可能的前缀
-                    raw_title = lines[0].strip()
-                    title = re.sub(r'^(中文)?标题[:：]\s*', '', raw_title).strip()
+Example Output:
+OpenAI发布GPT-5预览版
+OpenAI今日发布了GPT-5预览版，性能较上一代提升3倍。新模型支持实时语音对话，推理成本降低50%。CEO Sam Altman表示这是迈向AGI的重要一步。
+"""
 
-                    # 剩下的部分作为摘要，可能有换行
-                    raw_summary = "\n".join(lines[1:]).strip()
-                    summary = re.sub(r'^摘要[:：]\s*', '', raw_summary).strip()
+        try:
+            async with self.semaphore:
+                response = await self.model.generate_content_async(prompt)
+            lines = response.text.strip().split('\n')
 
-                    # 检查摘要是否包含无效内容 (TechCrunch fix)
-                    if "request result" in summary.lower() or "javascript is disabled" in summary.lower() or len(summary) < 10:
-                        # 尝试回退到原始摘要的翻译
-                        original_summary = item.summary or ""
-                        if original_summary and len(original_summary) > 10:
-                            summary = await self.translate_to_chinese(original_summary)
-                        else:
-                            summary = "暂无详细内容"
+            # Check for IRRELEVANT response
+            if len(lines) > 0 and "IRRELEVANT" in lines[0].upper():
+                title = item.title
+                summary = "IRRELEVANT"
+                is_translated = False
+            elif len(lines) >= 2:
+                # 清理可能的前缀
+                raw_title = lines[0].strip()
+                title = re.sub(r'^(中文)?标题[:：]\s*', '', raw_title).strip()
+                # Remove markdown bold/italic
+                title = title.replace('**', '').replace('*', '')
 
-                    is_translated = True
+                # 剩下的部分作为摘要，可能有换行
+                raw_summary = "\n".join(lines[1:]).strip()
+                summary = re.sub(r'^摘要[:：]\s*', '', raw_summary).strip()
+
+                # 检查摘要是否包含无效内容
+                if "request result" in summary.lower() or "javascript is disabled" in summary.lower():
+                     summary = "暂无详细内容"
+
+                # 强制中文检查 (简单)
+                if is_english(summary) and len(summary) > 20:
+                     # Gemini ignored instruction, try simple translation
+                     summary = await self.translate_to_chinese(summary)
+
+                is_translated = True
+            else:
+                # Fallback format
+                if is_english(response.text):
+                     summary = await self.translate_to_chinese(response.text)
                 else:
-                    # Fallback if format is unexpected but not irrelevant
-                    title = item.title
-                    summary = response.text.strip()
-                    is_translated = False
+                     summary = response.text.strip()
+                is_translated = False
 
-            except Exception as e:
-                print(f"Translate & summarize error: {e}")
+        except Exception as e:
+            print(f"Translate & summarize error for '{item.title[:20]}...': {e}")
+            # Fallback: Just translate the original summary if it exists
+            if item.summary and is_english(item.summary):
+                 summary = await self.translate_to_chinese(item.summary)
+            else:
+                 summary = item.summary or ""
 
-        # 对于中文内容，或者未被翻译的英文内容，进行智能摘要和过滤（特别是针对36Kr等多条混合的情况）
-        else:
-            new_summary = await self.summarize_item(item)
-            if new_summary:
-                summary = new_summary
+        # Final Length Check
+        if summary and len(summary) > 300:
+            summary = summary[:297] + "..."
 
         return title, summary, is_translated
 
     async def summarize_item(self, item: NewsItem) -> str:
-        """Generate a concise summary for a single news item, handling mixed content."""
-        # 优先使用完整内容进行总结
+        """Generate a concise summary for a single news item (Chinese content)."""
         content_to_summarize = item.content if item.content and len(item.content) > len(item.summary or "") else (item.summary or "无")
 
-        prompt = f"""请阅读以下新闻，这可能是一条包含多条快讯的汇总，也可能是一篇单独的文章。
+        if len(content_to_summarize) > 10000:
+             content_to_summarize = content_to_summarize[:10000] + "..."
 
-标题：{item.title}
-来源：{item.source}
-内容：{content_to_summarize}
+        prompt = f"""Summarize this news in Simplified Chinese.
 
-你的任务是：
-1. **严格筛选**：这条新闻必须与**人工智能(AI)、大模型(LLM)、机器学习(ML)、生成式AI(AIGC)**直接相关。
-   - 如果只是普通科技新闻（如手机发布、互联网八卦、普通融资）而没有明确的AI技术或应用核心，请**直接返回 "IRRELEVANT"**。
-   - 即使提到了"智能"二字，如果不是AI技术相关的（如"智能家电"、"智能手机"），也算无关。
-2. **提取与总结**：
-   - 如果是**多条快讯汇总**：只提取与AI相关的条目。
-   - 如果是**单篇文章**：生成100-150字的中文摘要。
+Title: {item.title}
+Source: {item.source}
+Content: {content_to_summarize}
 
-要求：
-- 直接返回摘要内容，**不要包含任何标题前缀**（如"中文标题："、"摘要："等）。
-- 如果内容无关，仅返回 "IRRELEVANT"。"""
+Task:
+1. **Filter**: If not AI/Tech related, return "IRRELEVANT".
+2. **Summarize**:
+   - Language: **Simplified Chinese**.
+   - Length: **50-100 words** (strictly < 200 characters).
+   - Style: News brief.
+
+Output ONLY the summary text. No prefixes."""
 
         try:
             async with self.semaphore:
                 response = await self.model.generate_content_async(prompt)
             result = response.text.strip()
-            # 移除可能的markdown引用块符号
             result = result.replace('```', '').strip()
-
-            # 再次清理可能的前缀
             result = re.sub(r'^(中文)?标题[:：]\s*', '', result)
             result = re.sub(r'^摘要[:：]\s*', '', result)
+
+            if "IRRELEVANT" in result.upper():
+                return "IRRELEVANT"
+
+            # Final Length Check
+            if len(result) > 300:
+                result = result[:297] + "..."
 
             return result
         except Exception as e:

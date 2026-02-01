@@ -86,6 +86,23 @@ rss_sources:
     max_items: 10
     enabled: true
 
+  # === Trending Models & Projects (Faster than news) ===
+  huggingface_daily:
+    name: "Hugging Face Daily Papers"
+    url: "https://rsshub.app/huggingface/daily_papers"
+    category: "papers"
+    keywords: []
+    max_items: 5
+    enabled: true
+
+  producthunt_ai:
+    name: "Product Hunt AI"
+    url: "https://rsshub.app/producthunt/topic/artificial-intelligence"
+    category: "industry"
+    keywords: []
+    max_items: 5
+    enabled: true
+
   # === Newsletter & 深度分析 ===
   a16z:
     name: "a16z AI"
