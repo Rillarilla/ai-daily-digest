@@ -652,7 +652,12 @@ class FeishuPublisher:
                             "content": "📖 查看完整内容"
                         },
                         "type": "primary",
-                        "url": doc_url
+                        "multi_url": {
+                            "url": doc_url,
+                            "pc_url": doc_url,
+                            "ios_url": doc_url,
+                            "android_url": doc_url
+                        }
                     }
                 ]
             })

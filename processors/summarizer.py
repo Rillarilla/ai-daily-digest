@@ -98,11 +98,12 @@ Content: {content_to_summarize}
 
 Task:
 1. **Filter**: Is this related to AI, LLMs, Machine Learning, or Tech Industry?
-   - If NOT related (e.g. general politics, crime, sports), return "IRRELEVANT".
+   - If NOT related (e.g. general politics, crime, sports), OR if content is empty/meaningless, return "IRRELEVANT".
 2. **Summarize**: Write a concise summary in **Simplified Chinese (简体中文)**.
+   - **Do NOT include** prefixes like "AI: YES", "AI相关", or "Based on title".
+   - **Do NOT include** English explanations.
+   - If content is empty but title is informative, summarize based on title.
    - Length: **50-100 words** (strictly < 200 characters).
-   - Focus on: What happened? Why it matters? Key facts/numbers.
-   - Tone: Professional, objective news style.
 
 Format:
 Line 1: [Chinese Title]
@@ -110,7 +111,7 @@ Line 2: [Chinese Summary]
 
 Example Output:
 OpenAI发布GPT-5预览版
-OpenAI今日发布了GPT-5预览版，性能较上一代提升3倍。新模型支持实时语音对话，推理成本降低50%。CEO Sam Altman表示这是迈向AGI的重要一步。
+OpenAI今日发布了GPT-5预览版，性能较上一代提升3倍。新模型支持实时语音对话，推理成本降低50%。
 """
 
         try:
