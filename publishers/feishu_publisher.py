@@ -19,12 +19,17 @@ class FeishuPublisher:
     DOCUMENTS_DB = Path(__file__).parent.parent / "data" / "documents.json"
 
     def __init__(self):
-        self.app_id = os.environ.get("FEISHU_APP_ID")
-        self.app_secret = os.environ.get("FEISHU_APP_SECRET")
+        self.app_id = os.environ.get("FEISHU_APP_ID", "").strip()
+        self.app_secret = os.environ.get("FEISHU_APP_SECRET", "").strip()
         # Folder token (optional, not used if can't add app as collaborator)
-        self.folder_token = os.environ.get("FEISHU_FOLDER_TOKEN")
+        self.folder_token = os.environ.get("FEISHU_FOLDER_TOKEN", "").strip()
         self._tenant_access_token = None
         self._token_expiry = 0
+
+        if self.app_id:
+            print(f"   Debug: FEISHU_APP_ID length: {len(self.app_id)}")
+        if self.app_secret:
+            print(f"   Debug: FEISHU_APP_SECRET length: {len(self.app_secret)}")
 
     def is_configured(self) -> bool:
         """Check if Feishu credentials are present."""
