@@ -26,11 +26,6 @@ class FeishuPublisher:
         self._tenant_access_token = None
         self._token_expiry = 0
 
-        if self.app_id:
-            print(f"   Debug: FEISHU_APP_ID length: {len(self.app_id)}")
-        if self.app_secret:
-            print(f"   Debug: FEISHU_APP_SECRET length: {len(self.app_secret)}")
-
     def is_configured(self) -> bool:
         """Check if Feishu credentials are present."""
         return bool(self.app_id and self.app_secret)
@@ -122,10 +117,10 @@ class FeishuPublisher:
         return success
 
     async def delete_document(self, doc_token: str) -> bool:
-        """Delete a document by its token.
+        """Delete a file or document by its token.
 
         Args:
-            doc_token: The document token/id to delete
+            doc_token: The file/document token to delete
 
         Returns:
             True if deleted successfully, False otherwise
@@ -133,14 +128,15 @@ class FeishuPublisher:
         token = await self._get_tenant_access_token()
         headers = {"Authorization": f"Bearer {token}"}
 
-        url = f"{self.BASE_URL}/drive/v1/files/{doc_token}?type=docx"
+        # The API is generic for files, type param is optional but safer to omit for generic files
+        url = f"{self.BASE_URL}/drive/v1/files/{doc_token}"
 
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.delete(url, headers=headers) as response:
                     data = await response.json()
                     if data.get("code") == 0:
-                        print(f"   ✅ Deleted document: {doc_token}")
+                        print(f"   ✅ Deleted file/document: {doc_token}")
                         return True
                     else:
                         print(f"   ❌ Delete failed: {data.get('msg', '')}")

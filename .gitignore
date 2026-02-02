@@ -28,4 +28,5 @@ Thumbs.db
 
 # Project specific
 output/
+data/documents.json
 *.html.bak
