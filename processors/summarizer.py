@@ -119,21 +119,35 @@ OpenAI今日发布了GPT-5预览版，性能较上一代提升3倍。新模型�
                 response = await self.model.generate_content_async(prompt)
             lines = response.text.strip().split('\n')
 
-            # Check for IRRELEVANT response
-            if len(lines) > 0 and "IRRELEVANT" in lines[0].upper():
+            # Check for IRRELEVANT response or explicit AI: NO
+            first_line_upper = lines[0].upper() if lines else ""
+            if len(lines) > 0 and ("IRRELEVANT" in first_line_upper or "AI: NO" in first_line_upper or "NOT RELATED" in first_line_upper):
                 title = item.title
                 summary = "IRRELEVANT"
                 is_translated = False
             elif len(lines) >= 2:
                 # 清理可能的前缀
                 raw_title = lines[0].strip()
-                title = re.sub(r'^(中文)?标题[:：]\s*', '', raw_title).strip()
-                # Remove markdown bold/italic
-                title = title.replace('**', '').replace('*', '')
+                # Remove prefixes like "Title:", "Chinese Title:", "AI: YES", "AI Related"
+                title = re.sub(r'^(中文)?标题[:：]\s*', '', raw_title)
+                title = re.sub(r'^AI[:：]\s*(YES|Related|Relevant)\s*', '', title, flags=re.IGNORECASE)
+                title = title.replace('**', '').replace('*', '').strip()
 
                 # 剩下的部分作为摘要，可能有换行
                 raw_summary = "\n".join(lines[1:]).strip()
-                summary = re.sub(r'^摘要[:：]\s*', '', raw_summary).strip()
+                summary = re.sub(r'^摘要[:：]\s*', '', raw_summary)
+
+                # 强力清洗摘要中的杂质
+                # 1. 去除 "AI: YES" 等前缀 (如果出现在摘要里)
+                summary = re.sub(r'^AI[:：]\s*(YES|Related|Relevant)[.,\s]*', '', summary, flags=re.IGNORECASE)
+                # 2. 去除 "Based on the title..." 等英文解释
+                summary = re.sub(r'Based on the title.*?[.。,，]', '', summary, flags=re.IGNORECASE)
+                summary = re.sub(r'The article is about.*?[.。,，]', '', summary, flags=re.IGNORECASE)
+                summary = re.sub(r'This article discusses.*?[.。,，]', '', summary, flags=re.IGNORECASE)
+                # 3. 去除 "已翻译" 等标记 (如果是模型自己加的)
+                summary = summary.replace('已翻译', '')
+
+                summary = summary.strip()
 
                 # 检查摘要是否包含无效内容
                 if "request result" in summary.lower() or "javascript is disabled" in summary.lower():
