@@ -334,6 +334,10 @@ class FeishuPublisher:
     async def upload_file(self, file_path: str, file_name: str = None, parent_type: str = "explorer") -> dict:
         """Upload a file to Feishu Drive.
 
+        Requires Permissions:
+        - drive:drive (查看、评论、编辑和管理云空间所有文件)
+        - OR drive:file:upload (上传文件到云空间)
+
         Args:
             file_path: Local path to the file
             file_name: Name for the uploaded file (defaults to original filename)
@@ -371,7 +375,11 @@ class FeishuPublisher:
                     async with session.post(url, data=form_data, headers=headers) as response:
                         data = await response.json()
                         if data.get("code") != 0:
-                            print(f"   ❌ Upload failed: {data.get('msg')}")
+                            msg = data.get('msg')
+                            print(f"   ❌ Upload failed: {msg}")
+                            if "permission" in str(msg).lower() or "access denied" in str(msg).lower():
+                                print("   💡 Check permissions: 'drive:drive' or 'drive:file:upload' is required.")
+                                print("   💡 Remember to release a new version of your app after adding permissions!")
                             return None
 
                         file_token = data.get("data", {}).get("file_token")
