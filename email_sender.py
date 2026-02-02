@@ -77,31 +77,75 @@ class EmailSender:
 
         try:
             # PDF-specific CSS adjustments
-            # 添加中文字体支持
+            # 添加中文字体支持并优化排版（减少空白）
             pdf_css = CSS(string='''
                 @page {
                     size: A4;
-                    margin: 1.5cm;
+                    margin: 1cm; /* 减小页边距 */
                 }
                 body {
-                    font-size: 11px;
+                    font-size: 10.5px; /* 稍微减小字号 */
+                    line-height: 1.5; /* 减小行高 */
                     font-family: "PingFang SC", "Heiti SC", "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans SC", "Noto Sans CJK SC", "Droid Sans Fallback", "SimSun", sans-serif !important;
+                    background-color: #fff;
                 }
                 .container {
-                    max-width: 100%;
+                    max-width: 100% !important;
+                    width: 100% !important;
+                    margin: 0 !important;
+                    box-shadow: none !important;
                 }
                 .header {
-                    padding: 20px;
+                    padding: 15px 20px !important; /* 减小 Header 内边距 */
                 }
-                .news-image {
-                    max-width: 100px;
-                    max-height: 70px;
+                .header h1 {
+                    font-size: 24px !important;
+                    margin-bottom: 4px !important;
                 }
-                .news-item {
-                    page-break-inside: avoid;
+                .highlights {
+                    padding: 15px 20px !important; /* 减小 Highlights 内边距 */
+                }
+                .highlight-item {
+                    padding: 10px 15px !important;
+                    margin-bottom: 10px !important;
                 }
                 .category {
+                    padding: 15px 20px !important; /* 减小分类内边距 */
+                    border-bottom: 1px solid #eee !important;
+                }
+                .category-header {
+                    margin-bottom: 12px !important;
+                    font-size: 16px !important;
+                    padding-bottom: 8px !important;
+                }
+                .news-item {
+                    padding: 12px !important; /* 减小新闻卡片内边距 */
+                    margin-bottom: 12px !important; /* 减小卡片间距 */
+                    border: 1px solid #eee !important;
+                    box-shadow: none !important;
                     page-break-inside: avoid;
+                }
+                .news-title {
+                    font-size: 14px !important;
+                    margin-bottom: 6px !important;
+                }
+                .news-meta {
+                    margin-bottom: 8px !important;
+                    font-size: 12px !important;
+                }
+                .news-summary {
+                    font-size: 13px !important;
+                    margin-top: 8px !important;
+                    line-height: 1.5 !important;
+                }
+                .news-image {
+                    max-width: 80px !important;
+                    max-height: 60px !important;
+                }
+                /* Hide footer in PDF to save space */
+                .footer {
+                    padding: 10px !important;
+                    font-size: 10px !important;
                 }
             ''')
 
