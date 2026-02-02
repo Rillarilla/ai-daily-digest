@@ -170,37 +170,53 @@ Return ONLY a valid JSON object with this structure:
         if len(content_to_summarize) > 10000:
              content_to_summarize = content_to_summarize[:10000] + "..."
 
-        prompt = f"""Summarize this news in Simplified Chinese.
+        prompt = f"""Summarize the following news item and return a JSON object.
 
 Title: {item.title}
 Source: {item.source}
 Content: {content_to_summarize}
 
 Task:
-1. **Filter**: If not AI/Tech related, return "IRRELEVANT".
+1. **Filter**: If not AI/Tech related, set "is_relevant": false.
 2. **Summarize**:
    - Language: **Simplified Chinese**.
-   - Length: **50-100 words** (strictly < 200 characters).
+   - Length: 50-100 words.
    - Style: News brief.
 
-Output ONLY the summary text. No prefixes."""
+Return ONLY a valid JSON object:
+{{
+    "is_relevant": boolean,
+    "summary": "Chinese Summary"
+}}
+"""
 
         try:
             async with self.semaphore:
                 response = await self.model.generate_content_async(prompt)
-            result = response.text.strip()
-            result = result.replace('```', '').strip()
-            result = re.sub(r'^(中文)?标题[:：]\s*', '', result)
-            result = re.sub(r'^摘要[:：]\s*', '', result)
 
-            if "IRRELEVANT" in result.upper():
-                return "IRRELEVANT"
+            text_response = response.text.strip()
+            # Clean up potential markdown code blocks
+            if text_response.startswith("```json"):
+                text_response = text_response[7:]
+            if text_response.startswith("```"):
+                text_response = text_response[3:]
+            if text_response.endswith("```"):
+                text_response = text_response[:-3]
 
-            # Final Length Check
-            if len(result) > 300:
-                result = result[:297] + "..."
+            import json
+            try:
+                data = json.loads(text_response.strip())
+                if not data.get("is_relevant", True):
+                    return "IRRELEVANT"
+                return data.get("summary", "").strip()
+            except json.JSONDecodeError:
+                # Fallback
+                result = response.text.strip()
+                result = result.replace('```', '').strip()
+                if "IRRELEVANT" in result.upper():
+                    return "IRRELEVANT"
+                return result
 
-            return result
         except Exception as e:
             print(f"Summarize error: {e}")
             return item.summary or ""
