@@ -90,7 +90,7 @@ Requirements:
         if len(content_to_summarize) > 10000:
              content_to_summarize = content_to_summarize[:10000] + "..."
 
-        prompt = f"""Analyze this news item and write a summary in Simplified Chinese.
+        prompt = f"""Analyze the following news item and return a JSON object.
 
 Title: {item.title}
 Source: {item.source}
@@ -98,74 +98,56 @@ Content: {content_to_summarize}
 
 Task:
 1. **Filter**: Is this related to AI, LLMs, Machine Learning, or Tech Industry?
-   - If NOT related (e.g. general politics, crime, sports), OR if content is empty/meaningless, return "IRRELEVANT".
+   - If unrelated (politics, crime, sports, etc.) or if content is empty/meaningless, set "is_relevant": false.
 2. **Summarize**: Write a concise summary in **Simplified Chinese (简体中文)**.
-   - **Do NOT include** prefixes like "AI: YES", "AI相关", or "Based on title".
-   - **Do NOT include** English explanations.
-   - If content is empty but title is informative, summarize based on title.
-   - Length: **50-100 words** (strictly < 200 characters).
+   - Length: 50-100 words.
+   - Tone: Professional news brief.
+   - **Important**: Do NOT include any prefixes like "AI: YES", "Title:", "Summary:". Just the raw content.
 
-Format:
-Line 1: [Chinese Title]
-Line 2: [Chinese Summary]
-
-Example Output:
-OpenAI发布GPT-5预览版
-OpenAI今日发布了GPT-5预览版，性能较上一代提升3倍。新模型支持实时语音对话，推理成本降低50%。
+Return ONLY a valid JSON object with this structure:
+{{
+    "is_relevant": boolean,
+    "title": "Translated Chinese Title (if original is English)",
+    "summary": "Chinese Summary"
+}}
 """
 
         try:
             async with self.semaphore:
+                # Use generation_config to enforce JSON if supported, but prompt engineering usually works well
                 response = await self.model.generate_content_async(prompt)
-            lines = response.text.strip().split('\n')
 
-            # Check for IRRELEVANT response or explicit AI: NO
-            first_line_upper = lines[0].upper() if lines else ""
-            if len(lines) > 0 and ("IRRELEVANT" in first_line_upper or "AI: NO" in first_line_upper or "NOT RELATED" in first_line_upper):
-                title = item.title
-                summary = "IRRELEVANT"
-                is_translated = False
-            elif len(lines) >= 2:
-                # 清理可能的前缀
-                raw_title = lines[0].strip()
-                # Remove prefixes like "Title:", "Chinese Title:", "AI: YES", "AI Related"
-                title = re.sub(r'^(中文)?标题[:：]\s*', '', raw_title)
-                title = re.sub(r'^AI[:：]\s*(YES|Related|Relevant)\s*', '', title, flags=re.IGNORECASE)
-                title = title.replace('**', '').replace('*', '').strip()
+            text_response = response.text.strip()
 
-                # 剩下的部分作为摘要，可能有换行
-                raw_summary = "\n".join(lines[1:]).strip()
-                summary = re.sub(r'^摘要[:：]\s*', '', raw_summary)
+            # Clean up potential markdown code blocks
+            if text_response.startswith("```json"):
+                text_response = text_response[7:]
+            if text_response.startswith("```"):
+                text_response = text_response[3:]
+            if text_response.endswith("```"):
+                text_response = text_response[:-3]
 
-                # 强力清洗摘要中的杂质
-                # 1. 去除 "AI: YES" 等前缀 (如果出现在摘要里)
-                summary = re.sub(r'^AI[:：]\s*(YES|Related|Relevant)[.,\s]*', '', summary, flags=re.IGNORECASE)
-                # 2. 去除 "Based on the title..." 等英文解释
-                summary = re.sub(r'Based on the title.*?[.。,，]', '', summary, flags=re.IGNORECASE)
-                summary = re.sub(r'The article is about.*?[.。,，]', '', summary, flags=re.IGNORECASE)
-                summary = re.sub(r'This article discusses.*?[.。,，]', '', summary, flags=re.IGNORECASE)
-                # 3. 去除 "已翻译" 等标记 (如果是模型自己加的)
-                summary = summary.replace('已翻译', '')
+            import json
+            try:
+                data = json.loads(text_response.strip())
 
-                summary = summary.strip()
+                # Check relevance
+                if not data.get("is_relevant", True):
+                    return item.title, "IRRELEVANT", False
 
-                # 检查摘要是否包含无效内容
-                if "request result" in summary.lower() or "javascript is disabled" in summary.lower():
-                     summary = "暂无详细内容"
+                title = data.get("title", item.title).strip()
+                summary = data.get("summary", "").strip()
+                is_translated = True # JSON output means we processed it
 
-                # 强制中文检查 (简单)
-                if is_english(summary) and len(summary) > 20:
-                     # Gemini ignored instruction, try simple translation
-                     summary = await self.translate_to_chinese(summary)
+                # Final sanity check for "AI: YES" in title/summary just in case
+                title = re.sub(r'^AI[:：]\s*(YES|NO|Related).*?[:：]\s*', '', title, flags=re.IGNORECASE).strip()
 
-                is_translated = True
-            else:
-                # Fallback format
-                if is_english(response.text):
-                     summary = await self.translate_to_chinese(response.text)
-                else:
-                     summary = response.text.strip()
-                is_translated = False
+                return title, summary, is_translated
+
+            except json.JSONDecodeError:
+                print(f"JSON Parse Error for '{item.title}': {text_response[:50]}...")
+                # Fallback to simple text extraction if JSON fails
+                return item.title, "Summary generation failed (JSON Error)", False
 
         except Exception as e:
             print(f"Translate & summarize error for '{item.title[:20]}...': {e}")
@@ -240,32 +222,67 @@ Output ONLY the summary text. No prefixes."""
 
         all_content = "\n".join(content_parts)
 
-        prompt = f"""作为AI行业分析师，请根据今日收集的AI新闻，撰写"今日要点"摘要。
+        prompt = f"""作为AI行业分析师，请根据以下新闻列表，选出今日最重要的3条新闻要点。
 
-今日新闻列表：
+News List:
 {all_content}
 
-要求：
-1. 用中文撰写
-2. **只选择3条最抓人眼球、最重要的新闻**
-3. 每个要点1-2句话，独立成段
-4. **务必保证句子完整**，不要截断
-5. 选择标准：重大发布、融资事件、技术突破、行业影响力
-6. 风格：简洁有力，像新闻头条
+Task:
+1. Select exactly 3 most impactful AI news items (major releases, funding, breakthroughs).
+2. Write a concise summary for each in **Simplified Chinese**.
+3. **Important**: Return ONLY a valid JSON object. No other text.
 
-请按以下格式输出（只要3条）：
-1. 第一个要点（完整句子）。
-
-2. 第二个要点（完整句子）。
-
-3. 第三个要点（完整句子）。"""
+Format:
+{{
+    "highlights": [
+        "第一个要点（完整句子，中文）",
+        "第二个要点（完整句子，中文）",
+        "第三个要点（完整句子，中文）"
+    ]
+}}
+"""
 
         try:
             async with self.semaphore:
                 response = await self.model.generate_content_async(prompt)
-            raw_text = response.text.strip()
-            # 转换为HTML格式，每个要点变成独立的div块
-            return self._format_highlights_html(raw_text)
+
+            text_response = response.text.strip()
+            # Clean up potential markdown code blocks
+            if text_response.startswith("```json"):
+                text_response = text_response[7:]
+            if text_response.startswith("```"):
+                text_response = text_response[3:]
+            if text_response.endswith("```"):
+                text_response = text_response[:-3]
+
+            import json
+            try:
+                data = json.loads(text_response.strip())
+                highlights_list = data.get("highlights", [])
+
+                # Format as HTML
+                html_parts = []
+                for i, highlight in enumerate(highlights_list, 1):
+                    # Final sanity check for prefixes
+                    clean_highlight = re.sub(r'^(AI[:：]\s*(YES|NO|Related)|Title:|Summary:).*?[:：]\s*', '', highlight, flags=re.IGNORECASE).strip()
+                    if clean_highlight:
+                        html_parts.append(
+                            f'<div class="highlight-item">'
+                            f'<span class="highlight-number">{i}</span>'
+                            f'<span class="highlight-text">{clean_highlight}</span>'
+                            f'</div>'
+                        )
+
+                if html_parts:
+                    return '\n'.join(html_parts)
+
+            except json.JSONDecodeError:
+                print(f"JSON Parse Error for highlights: {text_response[:50]}...")
+                # Fallback to old text parsing
+                return self._format_highlights_html(response.text.strip())
+
+            return "今日AI动态收集完成，请查看下方详情。"
+
         except Exception as e:
             print(f"Highlights error: {e}")
             return "今日AI动态收集完成，请查看下方详情。"
