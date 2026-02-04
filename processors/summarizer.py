@@ -142,6 +142,26 @@ Return ONLY a valid JSON object with this structure:
                 # Final sanity check for "AI: YES" in title/summary just in case
                 title = re.sub(r'^AI[:：]\s*(YES|NO|Related).*?[:：]\s*', '', title, flags=re.IGNORECASE).strip()
 
+                # 1. Fallback for empty summary
+                if not summary:
+                     if title:
+                         summary = f"{title}（点击查看详情）"
+                     else:
+                         summary = "暂无详细摘要，请点击标题查看原文。"
+
+                # 2. Force translation if still English (Double Insurance)
+                if is_english(summary) and len(summary) > 10:
+                    try:
+                        summary = await self.translate_to_chinese(summary)
+                    except Exception:
+                        pass # Keep original if translation fails
+
+                if is_english(title) and len(title) > 5:
+                    try:
+                        title = await self.translate_to_chinese(title)
+                    except Exception:
+                        pass
+
                 return title, summary, is_translated
 
             except json.JSONDecodeError:
