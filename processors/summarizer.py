@@ -11,25 +11,23 @@ from collectors.base import NewsItem
 
 
 def is_english(text: str) -> bool:
-    """检查文本是否主要是英文。"""
+    """检查文本是否主要是英文（或非中文）。"""
     if not text:
         return False
 
-    # 优先检查是否包含一定比例的中文字符
-    # 统计中文字符 (\u4e00-\u9fff)
+    # 只要包含任意中文字符，就暂且认为是中文（为了容忍大量英文术语的情况）
+    # 但如果中文字符极少（例如只有1-2个），可能只是误夹杂
     chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
-    total_chars = len(text)
 
-    if total_chars > 0 and (chinese_chars / total_chars) > 0.05:
-        # 如果中文字符占比超过5%，认为是中文
-        return False
+    # 如果没有中文字符，肯定是外语/英文
+    if chinese_chars == 0:
+        return True
 
-    # 统计ASCII字母占比 (用于区分英文和其他非中文语言)
-    ascii_letters = sum(1 for c in text if c.isascii() and c.isalpha())
-    total_letters = sum(1 for c in text if c.isalpha())
-    if total_letters == 0:
-        return False
-    return ascii_letters / total_letters > 0.7
+    # 如果有中文，但占比极低 (<1%)，也视为英文 (可能是 "AI: YES" 这种)
+    if len(text) > 0 and (chinese_chars / len(text)) < 0.01:
+        return True
+
+    return False
 
 
 class GeminiSummarizer:
@@ -97,8 +95,13 @@ Source: {item.source}
 Content: {content_to_summarize}
 
 Task:
-1. **Filter**: Is this related to AI, LLMs, Machine Learning, or Tech Industry?
-   - If unrelated (politics, crime, sports, etc.) or if content is empty/meaningless, set "is_relevant": false.
+1. **Strict Filter**: Is this news primarily about **Artificial Intelligence (AI), LLMs, Machine Learning, or Generative AI**?
+   - **MUST be relevant to AI**.
+   - Set "is_relevant": false for:
+     - General Tech news (e.g. new phones, generic cloud services, IT earnings).
+     - Crypto / Blockchain / Web3.
+     - General Politics / Policy (unless specifically about AI regulation).
+     - Science / Space (unless AI is the core method).
 2. **Summarize**: Write a concise summary in **Simplified Chinese (简体中文)**.
    - Length: 50-100 words.
    - Tone: Professional news brief.
@@ -197,7 +200,8 @@ Source: {item.source}
 Content: {content_to_summarize}
 
 Task:
-1. **Filter**: If not AI/Tech related, set "is_relevant": false.
+1. **Strict Filter**: Is this news primarily about **Artificial Intelligence (AI), LLMs, Machine Learning, or Generative AI**?
+   - Set "is_relevant": false for General Tech, Crypto, Politics, Science (unless AI-centric).
 2. **Summarize**:
    - Language: **Simplified Chinese**.
    - Length: 50-100 words.
