@@ -52,20 +52,19 @@ class GeminiSummarizer:
         if not text:
             return ""
 
-        # 简单长度检查，如果太短可能不需要翻译或API开销不值得
-        if len(text) < 5:
+        # 简单长度检查
+        if len(text) < 2:
             return text
 
-        prompt = f"""You are a professional translator. Translate the following text to Simplified Chinese (简体中文).
+        prompt = f"""Translate the following text to Simplified Chinese (简体中文).
 
-Text:
-{text}
+Text: "{text}"
 
 Requirements:
 - Output ONLY the translated text.
-- No explanations, no quotes.
-- Keep technical terms in English (e.g. LLM, GPT, Transformer).
-- Keep it concise."""
+- No explanations.
+- Keep proper nouns (e.g. OpenAI, GPT, LLM) in English.
+"""
 
         try:
             async with self.semaphore:
@@ -105,12 +104,14 @@ Task:
 2. **Summarize**: Write a concise summary in **Simplified Chinese (简体中文)**.
    - Length: 50-100 words.
    - Tone: Professional news brief.
-   - **Important**: Do NOT include any prefixes like "AI: YES", "Title:", "Summary:". Just the raw content.
+3. **Translate Title**:
+   - Translate the title into **Simplified Chinese**.
+   - Keep key terms like "OpenAI", "GPT-5" in English.
 
 Return ONLY a valid JSON object with this structure:
 {{
     "is_relevant": boolean,
-    "title": "Translated Chinese Title (if original is English)",
+    "title": "MUST BE TRANSLATED CHINESE TITLE",
     "summary": "Chinese Summary"
 }}
 """
@@ -138,7 +139,10 @@ Return ONLY a valid JSON object with this structure:
                 if not data.get("is_relevant", True):
                     return item.title, "IRRELEVANT", False
 
-                title = data.get("title", item.title).strip()
+                # Get title from JSON, fallback to original if empty
+                json_title = data.get("title", "").strip()
+                title = json_title if json_title else item.title
+
                 summary = data.get("summary", "").strip()
                 is_translated = True # JSON output means we processed it
 
@@ -159,11 +163,15 @@ Return ONLY a valid JSON object with this structure:
                     except Exception:
                         pass # Keep original if translation fails
 
-                if is_english(title) and len(title) > 5:
+                # 3. Check TITLE for English and force translate
+                if is_english(title) and len(title) >= 3:
                     try:
-                        title = await self.translate_to_chinese(title)
-                    except Exception:
-                        pass
+                        # print(f"   Title is English, force translating: {title[:20]}...")
+                        translated_title = await self.translate_to_chinese(title)
+                        if translated_title:
+                            title = translated_title
+                    except Exception as e:
+                        print(f"   Title translation failed: {e}")
 
                 return title, summary, is_translated
 
