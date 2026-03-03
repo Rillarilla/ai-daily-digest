@@ -118,9 +118,20 @@ async def main_async():
         try:
             summarizer = GeminiSummarizer(api_key=api_key)
 
+            # Semantic dedup BEFORE translation (saves API calls)
+            print("🔍 Semantic deduplication...")
+            categories = await summarizer.semantic_deduplicate(categories)
+            total_items = sum(len(items) for items in categories.values())
+            print(f"   After dedup: {total_items} items\n")
+
+            # Categories that bypass AI relevance filter (non-AI content the user wants)
+            skip_relevance = {"samsung"}
+
             # Translate items in each category (Processing categories sequentially, items parallel)
             for cat_name, items in categories.items():
-                valid_items, _ = await summarizer.process_and_filter_items(items)
+                valid_items, _ = await summarizer.process_and_filter_items(
+                    items, skip_relevance_categories=skip_relevance
+                )
                 categories[cat_name] = valid_items
 
             # Generate highlights

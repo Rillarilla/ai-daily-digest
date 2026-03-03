@@ -15,16 +15,18 @@ def is_english(text: str) -> bool:
     if not text:
         return False
 
-    # 只要包含任意中文字符，就暂且认为是中文（为了容忍大量英文术语的情况）
-    # 但如果中文字符极少（例如只有1-2个），可能只是误夹杂
     chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
 
-    # 如果没有中文字符，肯定是外语/英文
+    # 没有中文字符，肯定是英文
     if chinese_chars == 0:
         return True
 
-    # 如果有中文，但占比极低 (<1%)，也视为英文 (可能是 "AI: YES" 这种)
-    if len(text) > 0 and (chinese_chars / len(text)) < 0.01:
+    # 中文字符少于3个，很可能只是夹杂的个别汉字（如品牌名中偶尔出现）
+    if chinese_chars < 3:
+        return True
+
+    # 中文占比低于5%，视为英文（提高阈值以捕获更多未翻译的情况）
+    if len(text) > 0 and (chinese_chars / len(text)) < 0.05:
         return True
 
     return False
@@ -52,24 +54,28 @@ class GeminiSummarizer:
         if not text:
             return ""
 
-        # 简单长度检查
         if len(text) < 2:
             return text
 
-        prompt = f"""Translate the following text to Simplified Chinese (简体中文).
+        prompt = f"""请将以下文本翻译成简体中文。
 
-Text: "{text}"
+原文："{text}"
 
-Requirements:
-- Output ONLY the translated text.
-- No explanations.
-- Keep proper nouns (e.g. OpenAI, GPT, LLM) in English.
+要求：
+- 只输出翻译后的中文文本，不要引号、不要解释
+- 保留专有名词原文（如 OpenAI, GPT, LLM, Claude, Google）
+- 翻译必须包含中文字符
 """
 
         try:
             async with self.semaphore:
                 response = await self.model.generate_content_async(prompt)
-            return response.text.strip()
+            result = response.text.strip()
+            # 去掉可能的外层引号
+            if (result.startswith('"') and result.endswith('"')) or \
+               (result.startswith("'") and result.endswith("'")):
+                result = result[1:-1].strip()
+            return result
         except Exception as e:
             print(f"Translation error: {e}")
             return text
@@ -104,15 +110,18 @@ Task:
 2. **Summarize**: Write a concise summary in **Simplified Chinese (简体中文)**.
    - Length: 50-100 words.
    - Tone: Professional news brief.
-3. **Translate Title**:
-   - Translate the title into **Simplified Chinese**.
-   - Keep key terms like "OpenAI", "GPT-5" in English.
+3. **Translate Title** (极其重要 - CRITICAL):
+   - 你**必须**将标题翻译成**简体中文**。
+   - 标题**必须包含中文字符**，不能是纯英文。
+   - 仅保留品牌名和技术术语原文（如 OpenAI, GPT-5, LLM, Claude）。
+   - 示例: "OpenAI Launches GPT-5" → "OpenAI 发布 GPT-5"
+   - 示例: "Google DeepMind Achieves Breakthrough" → "Google DeepMind 取得重大突破"
 
 Return ONLY a valid JSON object with this structure:
 {{
     "is_relevant": boolean,
-    "title": "MUST BE TRANSLATED CHINESE TITLE",
-    "summary": "Chinese Summary"
+    "title": "必须是翻译后的中文标题",
+    "summary": "中文摘要"
 }}
 """
 
@@ -163,13 +172,15 @@ Return ONLY a valid JSON object with this structure:
                     except Exception:
                         pass # Keep original if translation fails
 
-                # 3. Check TITLE for English and force translate
+                # 3. Check TITLE for English and force translate (with verification)
                 if is_english(title) and len(title) >= 3:
                     try:
-                        # print(f"   Title is English, force translating: {title[:20]}...")
                         translated_title = await self.translate_to_chinese(title)
-                        if translated_title:
+                        # 验证翻译结果确实包含中文
+                        if translated_title and not is_english(translated_title):
                             title = translated_title
+                        else:
+                            print(f"   ⚠️ Title translation still English, keeping: {title[:30]}...")
                     except Exception as e:
                         print(f"   Title translation failed: {e}")
 
@@ -414,10 +425,12 @@ Format:
     async def process_and_filter_items(
         self,
         items: list[NewsItem],
-        max_items: int = 30
+        max_items: int = 30,
+        skip_relevance_categories: Optional[set] = None,
     ) -> tuple[list[NewsItem], int]:
         """
         Process items with translation and filter out irrelevant content.
+        Items in skip_relevance_categories won't be filtered by AI relevance.
         Returns (valid_items, translated_count).
         """
         print(f"🌐 Translating {len(items)} items...")
@@ -443,10 +456,14 @@ Format:
 
             title, summary, is_translated = result
 
-            # Filter irrelevant content
+            # Filter irrelevant content (skip for user-requested categories like samsung)
             if summary and "IRRELEVANT" in summary:
-                print(f"   🚫 Skipping irrelevant item: {item.title}")
-                continue
+                if skip_relevance_categories and item.category in skip_relevance_categories:
+                    # 用户指定的分类，不过滤，但需要重新生成摘要
+                    summary = item.summary or ""
+                else:
+                    print(f"   🚫 Skipping irrelevant item: {item.title}")
+                    continue
 
             item.title = title
             item.summary = summary
@@ -458,6 +475,98 @@ Format:
 
         print(f"   Translated {translated_count} items (Filtered {len(items) - len(valid_items)} irrelevant)\n")
         return valid_items, translated_count
+
+    async def semantic_deduplicate(
+        self,
+        categories: dict[str, list['NewsItem']],
+    ) -> dict[str, list['NewsItem']]:
+        """使用 Gemini 识别跨来源的相同主题新闻，保留最全面的一条。"""
+        import json
+
+        # 扁平化所有条目，记录来源分类
+        all_items: list[tuple[str, 'NewsItem']] = []
+        for cat, items in categories.items():
+            for item in items:
+                all_items.append((cat, item))
+
+        if len(all_items) <= 1:
+            return categories
+
+        # 构建标题列表供 Gemini 分析
+        titles_text = "\n".join(
+            f"{i}: {item.title} [{item.source}]"
+            for i, (_, item) in enumerate(all_items)
+        )
+
+        prompt = f"""以下是从不同新闻来源收集到的新闻标题列表。请找出报道**同一事件或主题**的新闻组。
+
+{titles_text}
+
+要求：
+- 只有当两条或以上新闻明确在报道同一个具体事件时才归为一组
+- 仅主题相近但事件不同的不算重复（例如"OpenAI发布新模型"和"Google发布新模型"不算重复）
+- 如果没有重复，返回空数组
+
+返回一个JSON对象，格式如下：
+{{
+    "groups": [[0, 3, 7], [2, 5]]
+}}
+每个子数组包含报道相同事件的新闻索引号。只列出有重复的组。"""
+
+        try:
+            async with self.semaphore:
+                response = await self.model.generate_content_async(prompt)
+
+            text_response = response.text.strip()
+            if text_response.startswith("```json"):
+                text_response = text_response[7:]
+            if text_response.startswith("```"):
+                text_response = text_response[3:]
+            if text_response.endswith("```"):
+                text_response = text_response[:-3]
+
+            data = json.loads(text_response.strip())
+            groups = data.get("groups", [])
+
+            if not groups:
+                return categories
+
+            # 对每组重复新闻，保留内容最丰富的一条，移除其他
+            indices_to_remove: set[int] = set()
+            for group in groups:
+                if len(group) < 2:
+                    continue
+                # 在组内选出内容最长的条目作为保留项
+                best_idx = max(
+                    group,
+                    key=lambda idx: len((all_items[idx][1].content or "") + (all_items[idx][1].summary or ""))
+                    if 0 <= idx < len(all_items) else 0,
+                )
+                for idx in group:
+                    if idx != best_idx and 0 <= idx < len(all_items):
+                        removed = all_items[idx][1]
+                        kept = all_items[best_idx][1]
+                        print(f"   🔗 去重: 移除「{removed.title[:30]}」({removed.source})，保留「{kept.title[:30]}」({kept.source})")
+                        indices_to_remove.add(idx)
+
+            # 重建分类字典，排除被移除的条目
+            new_categories: dict[str, list['NewsItem']] = {cat: [] for cat in categories}
+            for i, (cat, item) in enumerate(all_items):
+                if i not in indices_to_remove:
+                    new_categories[cat].append(item)
+
+            # 移除空分类
+            new_categories = {cat: items for cat, items in new_categories.items() if items}
+
+            removed_count = len(indices_to_remove)
+            if removed_count:
+                print(f"   ✅ 语义去重完成：移除 {removed_count} 条重复新闻")
+
+            return new_categories
+
+        except Exception as e:
+            print(f"   ⚠️ 语义去重失败（保留全部）: {e}")
+            return categories
 
     async def batch_summarize(
         self,
