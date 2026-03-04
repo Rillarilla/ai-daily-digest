@@ -90,7 +90,7 @@ rss_sources:
   samsung_newsroom:
     name: "Samsung Newsroom"
     url: "https://news.samsung.com/global/feed"
-    category: "samsung"
+    category: "big_tech"
     keywords: ["Galaxy", "phone", "mobile", "smartphone", "手机", "折叠", "foldable", "One UI", "S2", "S25", "S26", "Z Flip", "Z Fold"]
     max_items: 10
     enabled: true
@@ -98,7 +98,7 @@ rss_sources:
   sammobile:
     name: "SamMobile"
     url: "https://www.sammobile.com/feed/"
-    category: "samsung"
+    category: "big_tech"
     keywords: []
     max_items: 10
     enabled: true
@@ -277,7 +277,6 @@ output:
     - "papers"
     - "newsletter"
     - "industry"
-    - "samsung"
     - "podcast"
     - "social"
     - "china"
@@ -288,7 +287,6 @@ output:
     papers: "📄 前沿论文"
     newsletter: "📬 Newsletter精选"
     industry: "💰 行业投融资"
-    samsung: "📱 三星手机"
     podcast: "🎙️ 播客更新"
     social: "🐦 社交热议"
     china: "🇨🇳 国内动态"

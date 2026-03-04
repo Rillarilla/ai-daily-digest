@@ -153,13 +153,13 @@ Return ONLY a valid JSON object with this structure:
                 title = json_title if json_title else item.title
 
                 summary = data.get("summary", "").strip()
-                is_translated = True # JSON output means we processed it
+                is_translated = is_english(item.title)  # 只有原标题是英文才标记为已翻译
 
                 # Final sanity check for "AI: YES" in title/summary just in case
                 title = re.sub(r'^AI[:：]\s*(YES|NO|Related).*?[:：]\s*', '', title, flags=re.IGNORECASE).strip()
 
-                # 1. Fallback for empty summary
-                if not summary:
+                # 1. Fallback for empty or too-short summary
+                if not summary or len(summary.strip()) < 5:
                      if title:
                          summary = f"{title}（点击查看详情）"
                      else:
@@ -193,9 +193,20 @@ Return ONLY a valid JSON object with this structure:
 
         except Exception as e:
             print(f"Translate & summarize error for '{item.title[:20]}...': {e}")
-            # Fallback: Just translate the original summary if it exists
+            # Fallback: 翻译标题和摘要
+            if is_english(item.title):
+                try:
+                    translated = await self.translate_to_chinese(item.title)
+                    if translated and not is_english(translated):
+                        title = translated
+                        is_translated = True
+                except Exception:
+                    pass
             if item.summary and is_english(item.summary):
-                 summary = await self.translate_to_chinese(item.summary)
+                 try:
+                     summary = await self.translate_to_chinese(item.summary)
+                 except Exception:
+                     summary = item.summary
             else:
                  summary = item.summary or ""
 
@@ -426,11 +437,11 @@ Format:
         self,
         items: list[NewsItem],
         max_items: int = 30,
-        skip_relevance_categories: Optional[set] = None,
+        skip_relevance_sources: Optional[set] = None,
     ) -> tuple[list[NewsItem], int]:
         """
         Process items with translation and filter out irrelevant content.
-        Items in skip_relevance_categories won't be filtered by AI relevance.
+        Items from skip_relevance_sources won't be filtered by AI relevance.
         Returns (valid_items, translated_count).
         """
         print(f"🌐 Translating {len(items)} items...")
@@ -456,10 +467,10 @@ Format:
 
             title, summary, is_translated = result
 
-            # Filter irrelevant content (skip for user-requested categories like samsung)
+            # Filter irrelevant content (skip for user-requested sources like Samsung)
             if summary and "IRRELEVANT" in summary:
-                if skip_relevance_categories and item.category in skip_relevance_categories:
-                    # 用户指定的分类，不过滤，但需要重新生成摘要
+                if skip_relevance_sources and item.source in skip_relevance_sources:
+                    # 用户指定的来源，不过滤，但需要重新生成摘要
                     summary = item.summary or ""
                 else:
                     print(f"   🚫 Skipping irrelevant item: {item.title}")
