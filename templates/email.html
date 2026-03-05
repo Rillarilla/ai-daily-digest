@@ -265,6 +265,59 @@
             margin-right: 8px;
         }
 
+        /* Table of Contents */
+        .toc {
+            background: #ffffff;
+            padding: 20px 24px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .toc h2 {
+            color: #374151;
+            font-size: 16px;
+            margin: 0 0 14px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toc-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .toc-item a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.15s;
+        }
+
+        .toc-item a:hover {
+            background: #e5e7eb;
+            color: #4f46e5;
+        }
+
+        .toc-count {
+            background: #4f46e5;
+            color: white;
+            font-size: 11px;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
         /* Footer */
         .footer {
             background: #f9fafb;
@@ -324,9 +377,26 @@
         </div>
         {% endif %}
 
+        <!-- Table of Contents -->
+        {% if categories %}
+        <div class="toc">
+            <h2>📑 今日目录 · {{ item_count }} 条资讯</h2>
+            <ul class="toc-list">
+                {% for category_id, items in categories.items() %}
+                <li class="toc-item">
+                    <a href="#cat-{{ category_id }}">
+                        {{ category_names.get(category_id, category_id) }}
+                        <span class="toc-count">{{ items|length }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
         <!-- Categories -->
         {% for category_id, items in categories.items() %}
-        <div class="category">
+        <div class="category" id="cat-{{ category_id }}">
             <h2 class="category-header">
                 {{ category_names.get(category_id, category_id) }}
                 <span class="count">{{ items|length }}</span>
