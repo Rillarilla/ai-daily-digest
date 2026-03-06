@@ -83,34 +83,48 @@ Task Instructions:
         summary = item.summary or ""
         is_translated = False
 
-        # 优先使用完整内容进行总结
-        content_to_summarize = item.content if item.content and len(item.content) > len(item.summary or "") else (item.summary or "无")
+        # 优先使用完整内容进行总结，取较长的那个
+        raw_content = item.content if item.content and len(item.content) > len(item.summary or "") else (item.summary or "")
+
+        # 内容质量门槛：不足80字则直接丢弃，不送给 AI
+        if len(raw_content.strip()) < 80:
+            print(f"   🗑️ 内容过短，丢弃: {item.title[:40]}")
+            return item.title, "IRRELEVANT", False
 
         # 限制输入长度，避免token溢出
-        if len(content_to_summarize) > 10000:
-             content_to_summarize = content_to_summarize[:10000] + "..."
+        if len(raw_content) > 10000:
+            raw_content = raw_content[:10000] + "..."
 
-        prompt = f"""You are a professional tech news editor. Analyze the following news item and extract the required information.
+        prompt = f"""You are a professional Chinese tech news editor. Analyze the following news item.
 
 Title: {item.title}
 Source: {item.source}
-Content: {content_to_summarize}
+Content: {raw_content.strip()}
 
 Task Instructions:
-1. Relevance Check: Determine if this news is primarily about Artificial Intelligence (AI), LLMs, Machine Learning, or Generative AI.
-   - Return false for: General Tech, Crypto, Blockchain, General Politics, pure Science.
-2. Translation: Translate the title into Simplified Chinese (简体中文).
-   - The translated title MUST contain Chinese characters.
-   - Keep brand names and technical terms in English (e.g., OpenAI, GPT-5, LLM).
-3. Summarization: Write a concise summary of the news in Simplified Chinese (简体中文).
-   - Length: 50-100 words.
-   - Tone: Professional, objective news brief.
+1. Relevance Check: Is this news primarily about Artificial Intelligence (AI), LLMs, Machine Learning, or Generative AI?
+   - Return false for: General Tech without AI angle, Crypto, Blockchain, Politics, pure Science, product launches unrelated to AI.
 
-You MUST return ONLY a valid JSON object matching this schema exactly:
+2. Title Rewrite: Write an informative Chinese headline that captures the KEY POINT of this news.
+   - MUST be in Simplified Chinese (简体中文) with Chinese characters.
+   - Keep brand names and technical terms in English (e.g., OpenAI, GPT-5, LLM, Claude, Google).
+   - Be SPECIFIC about WHO did WHAT: "OpenAI发布GPT-5，多模态能力全面超越前代" NOT just "GPT-5发布".
+   - Target length: 20-35 characters.
+   - Do NOT translate word-for-word. Write a proper informative Chinese news headline.
+
+3. Summary: Write a high-quality summary entirely in Simplified Chinese (简体中文).
+   - Length: 60-100 words covering: what happened, key details, and why it matters.
+   - Do NOT simply rephrase or copy the provided content — write an original synthesis.
+   - If the content is short or low-quality, rely on the title, source, and your knowledge of the topic to produce a complete summary.
+   - Avoid vague openers like "本文介绍了" or "这篇文章讨论了". Lead with the core news fact.
+   - Full Chinese sentences only — English product names/terms (e.g. GPT-5, API) are OK inline.
+   - Tone: Professional, factual, third-person news brief.
+
+You MUST return ONLY a valid JSON object:
 {{
     "is_relevant": true or false,
-    "title": "Translated Chinese Title Here",
-    "summary": "Chinese summary here"
+    "title": "Rewritten Chinese headline",
+    "summary": "Chinese summary"
 }}
 """
 

@@ -371,6 +371,34 @@
             text-decoration: none;
         }
 
+        /* Print / PDF styles */
+        @media print {
+            body {
+                background-color: #fff;
+            }
+            .container {
+                max-width: 100% !important;
+                box-shadow: none !important;
+            }
+            .toc {
+                page-break-inside: avoid;
+            }
+            .toc-category {
+                page-break-inside: avoid;
+            }
+            .toc-item-link a {
+                color: #4338ca !important;
+                text-decoration: underline !important;
+            }
+            .toc-category-title a {
+                color: #1f2937 !important;
+                text-decoration: underline !important;
+            }
+            .news-item {
+                page-break-inside: avoid;
+            }
+        }
+
         /* Responsive */
         @media (max-width: 600px) {
             .header {

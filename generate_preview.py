@@ -76,7 +76,12 @@ async def generate_preview():
         try:
             summarizer = GeminiSummarizer(api_key=api_key)
 
-            # Translate and filter items in each category
+            # Semantic dedup BEFORE translation (saves API calls)
+            print("🔍 Semantic deduplication...")
+            categories = await summarizer.semantic_deduplicate(categories)
+            print(f"   After dedup: {sum(len(v) for v in categories.values())} items")
+
+            # Translate, rewrite titles, and filter items in each category
             for cat_name, items in categories.items():
                 valid_items, _ = await summarizer.process_and_filter_items(items)
                 categories[cat_name] = valid_items
