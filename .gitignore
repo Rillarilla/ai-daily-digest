@@ -30,3 +30,6 @@ Thumbs.db
 output/
 data/documents.json
 *.html.bak
+
+# Service account credentials
+transsion-sw-cd-*.json

@@ -142,6 +142,46 @@ class EmailSender:
                     max-width: 80px !important;
                     max-height: 60px !important;
                 }
+                /* Table of Contents - match HTML layout */
+                .toc {
+                    padding: 15px 20px !important;
+                    page-break-inside: avoid;
+                }
+                .toc h2 {
+                    font-size: 14px !important;
+                    margin-bottom: 10px !important;
+                }
+                .toc-category {
+                    page-break-inside: avoid;
+                    margin-bottom: 8px !important;
+                }
+                .toc-category-title {
+                    font-size: 13px !important;
+                    margin-bottom: 6px !important;
+                }
+                .toc-category-title a {
+                    color: #1f2937 !important;
+                    text-decoration: none !important;
+                }
+                .toc-item-link {
+                    font-size: 12px !important;
+                    margin-bottom: 4px !important;
+                }
+                .toc-item-link a {
+                    color: #4338ca !important;
+                    text-decoration: none !important;
+                }
+                .toc-count {
+                    font-size: 10px !important;
+                }
+                /* Highlights */
+                .highlights h2 {
+                    font-size: 16px !important;
+                }
+                /* Ensure internal anchor links work */
+                a[href^="#"] {
+                    color: #4338ca !important;
+                }
                 /* Hide footer in PDF to save space */
                 .footer {
                     padding: 10px !important;

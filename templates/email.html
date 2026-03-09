@@ -375,11 +375,13 @@
         @media print {
             body {
                 background-color: #fff;
+                font-family: "PingFang SC", "Heiti SC", "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans SC", sans-serif !important;
             }
             .container {
                 max-width: 100% !important;
                 box-shadow: none !important;
             }
+            /* TOC */
             .toc {
                 page-break-inside: avoid;
             }
@@ -388,14 +390,22 @@
             }
             .toc-item-link a {
                 color: #4338ca !important;
-                text-decoration: underline !important;
+                text-decoration: none !important;
             }
             .toc-category-title a {
                 color: #1f2937 !important;
-                text-decoration: underline !important;
+                text-decoration: none !important;
             }
+            /* News items */
             .news-item {
                 page-break-inside: avoid;
+            }
+            .highlight-item {
+                page-break-inside: avoid;
+            }
+            /* Internal anchor links */
+            a[href^="#"] {
+                color: #4338ca !important;
             }
         }
 
