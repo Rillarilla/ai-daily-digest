@@ -1,9 +1,9 @@
 name: AI Daily Digest
 
 on:
-  # 每天北京时间早上8点运行 (UTC 0:00)
+  # 每天北京时间早上7点运行 (UTC 23:00 前一天)
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 23 * * *'
 
   # 手动触发
   workflow_dispatch:
