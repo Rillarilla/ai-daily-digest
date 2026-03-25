@@ -138,20 +138,26 @@ class EmailSender:
                     margin-top: 8px !important;
                     line-height: 1.5 !important;
                 }
+                /* Use table layout for reliable right-side image in PDF */
+                .news-content-wrapper {
+                    display: table !important;
+                    width: 100% !important;
+                    border-spacing: 0 !important;
+                }
+                .news-text {
+                    display: table-cell !important;
+                    vertical-align: top !important;
+                    padding-right: 12px !important;
+                }
                 .news-image {
+                    display: table-cell !important;
+                    vertical-align: top !important;
                     width: 80px !important;
+                    min-width: 80px !important;
                     height: 60px !important;
-                    max-width: 80px !important;
                     max-height: 60px !important;
-                    flex-shrink: 0 !important;
-                    align-self: flex-start !important;
                     border-radius: 6px !important;
                     object-fit: cover !important;
-                }
-                .news-content-wrapper {
-                    display: flex !important;
-                    gap: 12px !important;
-                    align-items: flex-start !important;
                 }
                 /* Table of Contents - allow page breaks inside TOC */
                 .toc {
