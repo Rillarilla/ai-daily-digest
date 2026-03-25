@@ -143,12 +143,15 @@ class EmailSender:
                     height: 60px !important;
                     max-width: 80px !important;
                     max-height: 60px !important;
-                    float: right !important;
-                    margin-left: 12px !important;
-                    margin-bottom: 4px !important;
+                    flex-shrink: 0 !important;
+                    align-self: flex-start !important;
+                    border-radius: 6px !important;
+                    object-fit: cover !important;
                 }
                 .news-content-wrapper {
-                    display: block !important; /* override flex for PDF to prevent overlap */
+                    display: flex !important;
+                    gap: 12px !important;
+                    align-items: flex-start !important;
                 }
                 /* Table of Contents - allow page breaks inside TOC */
                 .toc {

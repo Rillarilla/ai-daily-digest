@@ -71,3 +71,9 @@ class BaseCollector(ABC):
             return True  # No filter = accept all
         text_lower = text.lower()
         return any(kw.lower() in text_lower for kw in keywords)
+
+    def filter_by_required_keywords(self, text: str, required_keywords: list[str]) -> bool:
+        """Check if text contains at least one of the required keywords (AND with main keywords)."""
+        if not required_keywords:
+            return True  # No requirement = accept all
+        return self.filter_by_keywords(text, required_keywords)
