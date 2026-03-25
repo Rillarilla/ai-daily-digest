@@ -140,7 +140,7 @@
             margin-bottom: 0;
         }
 
-        /* 图文布局 */
+        /* 图文布局：图片在DOM前但用order推到右边 */
         .news-content-wrapper {
             display: flex;
             gap: 16px;
@@ -148,6 +148,7 @@
 
         .news-text {
             flex: 1;
+            order: 1;
         }
 
         .news-image {
@@ -157,6 +158,7 @@
             object-fit: cover;
             flex-shrink: 0;
             align-self: flex-start;
+            order: 2;
         }
 
         .news-title {
@@ -504,6 +506,9 @@
             {% for item in items %}
             <div class="news-item {% if category_id == 'papers' %}paper-item{% endif %}" id="item-{{ category_id }}-{{ loop.index }}">
                 <div class="news-content-wrapper">
+                    {% if item.image_url %}
+                    <img class="news-image" src="{{ item.image_url }}" alt="" loading="lazy" onerror="this.style.display='none'">
+                    {% endif %}
                     <div class="news-text">
                         <h3 class="news-title">
                             {% if item.organization and category_id == 'papers' %}
@@ -535,9 +540,6 @@
                         </div>
                         {% endif %}
                     </div>
-                    {% if item.image_url %}
-                    <img class="news-image" src="{{ item.image_url }}" alt="" loading="lazy" onerror="this.style.display='none'">
-                    {% endif %}
                 </div>
             </div>
             {% endfor %}
