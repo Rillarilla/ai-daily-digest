@@ -33,3 +33,10 @@ data/documents.json
 
 # Service account credentials
 transsion-sw-cd-*.json
+
+# Generated files
+preview.pdf
+*.pdf
+
+# Claude Code local settings
+.claude/settings.local.json
