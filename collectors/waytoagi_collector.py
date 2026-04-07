@@ -8,8 +8,10 @@ The wiki has a "近 7 日更新日志" section with daily article summaries.
 Content is embedded as escaped JSON in the HTML (no login required).
 """
 
+import json
 import re
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 import aiohttp
 
 from .base import BaseCollector, NewsItem
@@ -30,6 +32,13 @@ ARTICLE_RE = re.compile(
 SUMMARY_RE = re.compile(
     r'"text":\{"0":"[^》]*》([^"]{15,}?)"',
 )
+
+SCRIPT_RE = re.compile(r"<script[^>]*>(.*?)</script>", re.DOTALL)
+CLIENT_VARS_RE = re.compile(
+    r"clientVars:\s*Object\((\{.*\})\)\s*\}\s*\);\s*window\.docxSSREditable",
+    re.DOTALL,
+)
+DATE_HEADING_RE = re.compile(r"\s*(\d{1,2}) 月 (\d{1,2}) 日\s*")
 
 
 class WayToAGICollector(BaseCollector):
@@ -113,6 +122,86 @@ class WayToAGICollector(BaseCollector):
 
     def _parse_date(self, html: str, date: datetime) -> list[NewsItem]:
         """Extract articles for a specific date from the wiki HTML."""
+        items = self._parse_date_from_block_map(html, date)
+        if items:
+            return items
+
+        return self._parse_date_legacy(html, date)
+
+    def _parse_date_from_block_map(self, html: str, date: datetime) -> list[NewsItem]:
+        """Parse Feishu's SSR block tree instead of relying on string slicing."""
+        client_vars = self._extract_client_vars(html)
+        if not client_vars:
+            return []
+
+        block_map = client_vars.get("data", {}).get("block_map", {})
+        block_sequence = client_vars.get("data", {}).get("block_sequence", [])
+        if not block_map or not block_sequence:
+            return []
+
+        target_heading = None
+        for block_id in block_sequence:
+            block = block_map.get(block_id, {}).get("data", {})
+            if block.get("type") != "heading3":
+                continue
+
+            heading_text = self._extract_block_text(block)
+            match = DATE_HEADING_RE.fullmatch(heading_text)
+            if not match:
+                continue
+
+            month, day = int(match.group(1)), int(match.group(2))
+            if month == date.month and day == date.day:
+                target_heading = block
+                break
+
+        if not target_heading:
+            return []
+
+        pub_date = date.replace(
+            hour=12, minute=0, second=0, microsecond=0,
+            tzinfo=timezone(timedelta(hours=8)),
+        )
+
+        items = []
+        seen = set()
+
+        for child_id in target_heading.get("children", []):
+            child = block_map.get(child_id, {}).get("data", {})
+            if child.get("type") != "bullet":
+                continue
+
+            mention = self._extract_mention_doc(child)
+            if not mention:
+                continue
+
+            token = mention.get("token", "").strip()
+            title = mention.get("title", "").strip()
+            raw_url = mention.get("raw_url", "").strip()
+
+            if not token or not title or token in seen:
+                continue
+            seen.add(token)
+
+            url = raw_url.split("?", 1)[0] if raw_url else f"https://waytoagi.feishu.cn/wiki/{token}"
+            summary = self._clean_summary(self._extract_block_text(child))
+
+            items.append(
+                NewsItem(
+                    title=title,
+                    url=url,
+                    source="WayToAGI",
+                    category="china",
+                    published=pub_date,
+                    summary=summary,
+                    tags=["知识库精选", "WayToAGI"],
+                )
+            )
+
+        return items
+
+    def _parse_date_legacy(self, html: str, date: datetime) -> list[NewsItem]:
+        """Fallback parser for older HTML layouts."""
         date_heading = self._date_heading(date)
 
         # Find the start of this date's section
@@ -151,11 +240,7 @@ class WayToAGICollector(BaseCollector):
 
             url = f"https://waytoagi.feishu.cn/wiki/{token}"
 
-            summary = summaries[i] if i < len(summaries) else None
-            if summary:
-                summary = re.sub(r"\s+", " ", summary).strip()
-                if len(summary) < 15:
-                    summary = None
+            summary = self._clean_summary(summaries[i] if i < len(summaries) else None)
 
             items.append(
                 NewsItem(
@@ -170,6 +255,61 @@ class WayToAGICollector(BaseCollector):
             )
 
         return items
+
+    def _extract_client_vars(self, html: str) -> Optional[dict]:
+        """Extract Feishu's SSR payload from the page HTML."""
+        for script in SCRIPT_RE.findall(html):
+            if "window.DATA = Object.assign" not in script or "block_map" not in script:
+                continue
+
+            match = CLIENT_VARS_RE.search(script)
+            if not match:
+                continue
+
+            try:
+                return json.loads(match.group(1))
+            except json.JSONDecodeError:
+                continue
+
+        return None
+
+    def _extract_block_text(self, block: dict) -> str:
+        """Read the plain text stored on a Feishu block."""
+        return (
+            block.get("text", {})
+            .get("initialAttributedTexts", {})
+            .get("text", {})
+            .get("0", "")
+        )
+
+    def _extract_mention_doc(self, block: dict) -> Optional[dict]:
+        """Read the linked document metadata from a bullet block."""
+        apool = block.get("text", {}).get("apool", {}).get("numToAttrib", {})
+        for attrib in apool.values():
+            if not isinstance(attrib, list) or len(attrib) < 2:
+                continue
+            if attrib[0] != "inline-component":
+                continue
+
+            try:
+                component = json.loads(attrib[1])
+            except json.JSONDecodeError:
+                continue
+
+            if component.get("type") == "mention_doc":
+                return component.get("data", {})
+
+        return None
+
+    def _clean_summary(self, summary: Optional[str]) -> Optional[str]:
+        if not summary:
+            return None
+
+        summary = summary.replace("《 》", "", 1)
+        summary = re.sub(r"\s+", " ", summary).strip()
+        if len(summary) < 15:
+            return None
+        return summary
 
 
 async def collect_waytoagi(config: dict) -> list[NewsItem]:

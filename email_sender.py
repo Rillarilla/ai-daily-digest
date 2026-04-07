@@ -4,6 +4,8 @@ Email sender module with PDF attachment support.
 
 import os
 import smtplib
+import sys
+import ctypes.util
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -15,8 +17,42 @@ from jinja2 import Environment, FileSystemLoader
 
 from collectors.base import NewsItem
 
+
+def _configure_weasyprint_macos_libs():
+    """Help WeasyPrint find Homebrew GTK libs on macOS."""
+    if sys.platform != "darwin":
+        return
+
+    prefix = "/opt/homebrew/lib"
+    library_map = {
+        "gobject-2.0-0": f"{prefix}/libgobject-2.0-0.dylib",
+        "libgobject-2.0-0": f"{prefix}/libgobject-2.0-0.dylib",
+        "pango-1.0-0": f"{prefix}/libpango-1.0-0.dylib",
+        "libpango-1.0-0": f"{prefix}/libpango-1.0-0.dylib",
+        "harfbuzz-0": f"{prefix}/libharfbuzz-0.dylib",
+        "libharfbuzz-0": f"{prefix}/libharfbuzz-0.dylib",
+        "harfbuzz-subset-0": f"{prefix}/libharfbuzz-subset.0.dylib",
+        "libharfbuzz-subset-0": f"{prefix}/libharfbuzz-subset.0.dylib",
+        "fontconfig-1": f"{prefix}/libfontconfig-1.dylib",
+        "libfontconfig-1": f"{prefix}/libfontconfig-1.dylib",
+        "pangoft2-1.0-0": f"{prefix}/libpangoft2-1.0-0.dylib",
+        "libpangoft2-1.0-0": f"{prefix}/libpangoft2-1.0-0.dylib",
+    }
+
+    if not all(Path(path).exists() for path in library_map.values()):
+        return
+
+    original_find_library = ctypes.util.find_library
+
+    def _patched_find_library(name: str):
+        return library_map.get(name) or original_find_library(name)
+
+    ctypes.util.find_library = _patched_find_library
+
+
 # Try to import weasyprint for PDF generation
 try:
+    _configure_weasyprint_macos_libs()
     from weasyprint import HTML, CSS
     WEASYPRINT_AVAILABLE = True
 except (ImportError, OSError):
