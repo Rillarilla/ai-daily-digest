@@ -46,7 +46,7 @@ export GEMINI_API_KEY="your-gemini-api-key"
 # Gmail SMTP (用于发送邮件)
 export SMTP_USER="your-email@gmail.com"
 export SMTP_PASSWORD="your-app-password"  # 需要使用 App Password
-export TO_EMAIL="rillahai@gmail.com"
+export TO_EMAIL="XXXXXXX@gmail.com"
 ```
 
 ### 3. 本地测试
