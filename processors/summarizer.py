@@ -55,7 +55,7 @@ class GeminiSummarizer:
         service_account_file: Optional[str] = None,
         model: str = "gemini-2.0-flash",
         project: str = "transsion-sw-cd",
-        location: str = "global",
+        location: str = "us-central1",
     ):
         sa_file = service_account_file or os.environ.get("GOOGLE_SA_FILE", _DEFAULT_SA_FILE)
 
