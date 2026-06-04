@@ -61,6 +61,74 @@ except (ImportError, OSError):
     print("[PDF] Install with: pip install weasyprint")
 
 
+def _compress_html_images(html_content: str, max_side: int = 400, quality: int = 70, timeout: int = 10) -> str:
+    """Download and shrink remote <img> sources, inlining them as JPEG data URIs.
+
+    News images embedded at full resolution can push the rendered PDF past
+    Feishu's 20MB upload limit. Compressing each image to a small thumbnail
+    keeps the PDF comfortably under the limit while preserving the layout.
+
+    On any per-image failure the image is replaced with a 1x1 transparent
+    pixel so WeasyPrint never fetches the full-size remote file (which would
+    defeat the size reduction).
+    """
+    import re
+    import io
+    import base64
+
+    try:
+        import requests
+        from PIL import Image
+    except ImportError as e:
+        print(f"[PDF] Image compression unavailable ({e}), keeping original images")
+        return html_content
+
+    TRANSPARENT_PX = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+    cache: dict[str, str] = {}
+    stats = {"count": 0, "orig": 0, "new": 0}
+
+    def compress_one(url: str) -> str:
+        if url in cache:
+            return cache[url]
+        try:
+            resp = requests.get(url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+            orig_len = len(resp.content)
+            img = Image.open(io.BytesIO(resp.content))
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            img.thumbnail((max_side, max_side), Image.LANCZOS)
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=quality, optimize=True)
+            data = buf.getvalue()
+            stats["count"] += 1
+            stats["orig"] += orig_len
+            stats["new"] += len(data)
+            result = "data:image/jpeg;base64," + base64.b64encode(data).decode()
+        except Exception as e:
+            print(f"[PDF] Image compress skip ({url[:60]}): {e}")
+            result = TRANSPARENT_PX
+        cache[url] = result
+        return result
+
+    def replace_img(match: "re.Match") -> str:
+        tag = match.group(0)
+        m = re.search(r'src=["\']([^"\']+)["\']', tag)
+        if not m:
+            return tag
+        url = m.group(1)
+        if not url.startswith("http"):
+            return tag  # already inlined or local
+        new_src = compress_one(url)
+        return tag[:m.start(1)] + new_src + tag[m.end(1):]
+
+    result = re.sub(r"<img\b[^>]*>", replace_img, html_content, flags=re.IGNORECASE)
+    if stats["count"]:
+        print(f"[PDF] Compressed {stats['count']} images: "
+              f"{stats['orig']/1024/1024:.1f}MB → {stats['new']/1024/1024:.2f}MB")
+    return result
+
+
 class EmailSender:
     """Send HTML emails via SMTP with optional PDF attachment."""
 
@@ -250,9 +318,14 @@ class EmailSender:
                 }
             ''')
 
+            # Shrink embedded images so the PDF stays under Feishu's 20MB
+            # upload limit (otherwise the Feishu doc/button can't be created).
+            html_content = _compress_html_images(html_content)
+
             html = HTML(string=html_content)
             html.write_pdf(output_path, stylesheets=[pdf_css])
-            print(f"[PDF] Generated: {output_path}")
+            size_mb = Path(output_path).stat().st_size / 1024 / 1024
+            print(f"[PDF] Generated: {output_path} ({size_mb:.1f} MB)")
             return True
         except Exception as e:
             print(f"[PDF] Generation error: {e}")

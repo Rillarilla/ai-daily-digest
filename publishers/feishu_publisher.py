@@ -357,8 +357,11 @@ class FeishuPublisher:
         file_bytes = Path(file_path).read_bytes()
         file_size = len(file_bytes)
 
-        # Feishu upload_all has a 20MB hard limit; larger files must use the
-        # chunked upload API. Surface this clearly instead of a vague error.
+        # Feishu upload_all has a 20MB hard limit. Images in the PDF are
+        # compressed upstream (see email_sender._compress_html_images) to keep
+        # well under this; guard here in case a digest still grows too large.
+        # (Chunked upload would need the drive:drive scope, which this app
+        # lacks, so we can't fall back to it.)
         UPLOAD_ALL_LIMIT = 20 * 1024 * 1024
         size_mb = file_size / 1024 / 1024
         print(f"   📦 File size: {size_mb:.1f} MB")
