@@ -363,7 +363,8 @@ class FeishuPublisher:
                 form_data = aiohttp.FormData()
                 form_data.add_field("file_name", file_name)
                 form_data.add_field("parent_type", parent_type)
-                form_data.add_field("parent_node", self.folder_token or "")
+                if self.folder_token:
+                    form_data.add_field("parent_node", self.folder_token)
                 form_data.add_field("size", str(file_size))
                 form_data.add_field("file", f, filename=file_name, content_type="application/pdf")
 
