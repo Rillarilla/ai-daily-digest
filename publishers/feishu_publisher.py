@@ -351,40 +351,56 @@ class FeishuPublisher:
         if not file_name:
             file_name = Path(file_path).name
 
-        # Get file size
-        file_size = Path(file_path).stat().st_size
+        # Read file into memory so the multipart body is deterministic.
+        # Streaming an open file handle is fragile: a retry/redirect can leave
+        # the pointer consumed, sending 0 bytes and causing a size mismatch.
+        file_bytes = Path(file_path).read_bytes()
+        file_size = len(file_bytes)
+
+        # Feishu upload_all has a 20MB hard limit; larger files must use the
+        # chunked upload API. Surface this clearly instead of a vague error.
+        UPLOAD_ALL_LIMIT = 20 * 1024 * 1024
+        size_mb = file_size / 1024 / 1024
+        print(f"   📦 File size: {size_mb:.1f} MB")
+        if file_size > UPLOAD_ALL_LIMIT:
+            print(f"   ❌ File exceeds Feishu upload_all 20MB limit ({size_mb:.1f} MB).")
+            return None
 
         url = f"{self.BASE_URL}/drive/v1/files/upload_all"
         headers = {"Authorization": f"Bearer {token}"}
 
         try:
-            with open(file_path, "rb") as f:
-                # Use FormData for multipart upload
-                form_data = aiohttp.FormData()
-                form_data.add_field("file_name", file_name)
-                form_data.add_field("parent_type", parent_type)
-                if self.folder_token:
-                    form_data.add_field("parent_node", self.folder_token)
-                form_data.add_field("size", str(file_size))
-                form_data.add_field("file", f, filename=file_name, content_type="application/pdf")
+            # Use FormData for multipart upload. The `file` field MUST be added
+            # last (after the metadata fields) per Feishu's requirements.
+            form_data = aiohttp.FormData()
+            form_data.add_field("file_name", file_name)
+            form_data.add_field("parent_type", parent_type)
+            if self.folder_token:
+                form_data.add_field("parent_node", self.folder_token)
+            form_data.add_field("size", str(file_size))
+            form_data.add_field("file", file_bytes, filename=file_name, content_type="application/pdf")
 
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(url, data=form_data, headers=headers) as response:
-                        data = await response.json()
-                        if data.get("code") != 0:
-                            msg = data.get('msg')
-                            print(f"   ❌ Upload failed: {msg}")
-                            if "permission" in str(msg).lower() or "access denied" in str(msg).lower():
-                                print("   💡 Check permissions: 'drive:drive' or 'drive:file:upload' is required.")
-                                print("   💡 Remember to release a new version of your app after adding permissions!")
-                            return None
-
-                        file_token = data.get("data", {}).get("file_token")
-                        if file_token:
-                            file_url = f"https://feishu.cn/file/{file_token}"
-                            print(f"   ✅ File uploaded: {file_url}")
-                            return {"file_token": file_token, "url": file_url}
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, data=form_data, headers=headers) as response:
+                    data = await response.json()
+                    if data.get("code") != 0:
+                        msg = data.get('msg')
+                        # Print the full response so we can diagnose generic
+                        # errors like "params error" (code + any field hints).
+                        print(f"   ❌ Upload failed (code={data.get('code')}): {msg}")
+                        print(f"   ↳ full response: {data}")
+                        print(f"   ↳ sent: file_name='{file_name}', parent_type='{parent_type}', size={file_size}")
+                        if "permission" in str(msg).lower() or "access denied" in str(msg).lower():
+                            print("   💡 Check permissions: 'drive:drive' or 'drive:file:upload' is required.")
+                            print("   💡 Remember to release a new version of your app after adding permissions!")
                         return None
+
+                    file_token = data.get("data", {}).get("file_token")
+                    if file_token:
+                        file_url = f"https://feishu.cn/file/{file_token}"
+                        print(f"   ✅ File uploaded: {file_url}")
+                        return {"file_token": file_token, "url": file_url}
+                    return None
 
         except Exception as e:
             print(f"   ❌ Upload error: {e}")
