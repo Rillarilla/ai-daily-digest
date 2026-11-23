@@ -164,7 +164,7 @@ async def main_async():
     if email_success:
         print("✅ Email sent successfully!")
     else:
-        print("❌ Failed to send email. Check SMTP configuration.")
+        print("❌ Failed to send email. See SMTP diagnostics above.")
 
     # Publish to Feishu (independent of email)
     publishers_config = config.get("publishers", {})
@@ -208,6 +208,9 @@ async def main_async():
                     print("   ⚠️ Feishu bot enabled but FEISHU_BOT_CHAT_ID not set")
         else:
             print("   ⚠️ Feishu publisher enabled but credentials not found (FEISHU_APP_ID/SECRET)")
+
+    if not email_success:
+        return 1
 
     print("\n✅ Daily digest completed!")
     return 0

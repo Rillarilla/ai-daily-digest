@@ -28,10 +28,10 @@ pip install -r requirements.txt
 brew install pango libffi
 ```
 
-**Ubuntu/Debian:**
+**Ubuntu 24.04 / Debian:**
 ```bash
-# 系统依赖
-sudo apt-get install build-essential python3-dev python3-pip python3-setuptools python3-wheel python3-cffi libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
+# WeasyPrint 运行依赖（使用 pip 安装预编译包）
+sudo apt-get install libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libharfbuzz-subset0
 
 # 中文字体 (解决 PDF 中文乱码)
 sudo apt-get install fonts-noto-cjk fonts-wqy-zenhei
@@ -44,6 +44,7 @@ sudo apt-get install fonts-noto-cjk fonts-wqy-zenhei
 export GEMINI_API_KEY="your-gemini-api-key"
 
 # Gmail SMTP (用于发送邮件)
+export SMTP_PORT=465
 export SMTP_USER="your-email@gmail.com"
 export SMTP_PASSWORD="your-app-password"  # 需要使用 App Password
 export TO_EMAIL="XXXXXXX@gmail.com"
@@ -62,7 +63,7 @@ python main.py
    - `GEMINI_API_KEY`
    - `SMTP_USER`
    - `SMTP_PASSWORD`
-3. 启用 Actions，每天北京时间 8:00 自动运行
+3. 启用 Actions，每天北京时间 7:00 自动发送邮件，飞书推送默认关闭。邮件失败时，Actions 会标记本次运行失败。
 
 ## 配置数据源
 

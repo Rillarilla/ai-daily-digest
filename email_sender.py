@@ -4,6 +4,7 @@ Email sender module with PDF attachment support.
 
 import os
 import smtplib
+import ssl
 import sys
 import ctypes.util
 from email.mime.text import MIMEText
@@ -373,16 +374,35 @@ class EmailSender:
             except Exception as e:
                 print(f"[Email] Failed to attach PDF: {e}")
 
+        stage = "connection"
         try:
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls()
+            tls_context = ssl.create_default_context()
+            use_implicit_tls = self.smtp_port == 465
+            if use_implicit_tls:
+                connection = smtplib.SMTP_SSL(
+                    self.smtp_server, self.smtp_port, timeout=30, context=tls_context
+                )
+            else:
+                connection = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30)
+
+            with connection as server:
+                if not use_implicit_tls:
+                    stage = "STARTTLS"
+                    server.starttls(context=tls_context)
+                stage = "authentication"
                 server.login(self.smtp_user, self.smtp_password)
+                stage = "delivery"
                 server.sendmail(self.from_email, to_email, msg.as_string())
-            print(f"Email sent successfully to {to_email}")
-            return True
-        except Exception as e:
-            print(f"Failed to send email: {e}")
-            return False
+                stage = "disconnect"
+        except OSError as e:
+            if stage != "disconnect":
+                print(f"[Email] SMTP {stage} failed ({self.smtp_server}:{self.smtp_port}): {e}")
+                return False
+            # SMTP already accepted the message; a failed QUIT does not undo it.
+            print(f"[Email] SMTP disconnect failed after delivery: {e}")
+
+        print(f"Email sent successfully to {to_email}")
+        return True
 
 
 def send_digest_email(
