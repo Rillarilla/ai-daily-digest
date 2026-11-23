@@ -3,7 +3,7 @@
 AI Daily Digest - Main entry point.
 
 Collects AI news from multiple sources, summarizes with Gemini,
-and sends a beautifully formatted email digest.
+and publishes a PDF digest to Feishu.
 """
 
 import asyncio
@@ -30,7 +30,7 @@ from collectors import (
     NewsItem,
 )
 from processors import GeminiSummarizer, process_items
-from email_sender import send_digest_email, EmailSender, WEASYPRINT_AVAILABLE
+from email_sender import EmailSender, WEASYPRINT_AVAILABLE
 from publishers.feishu_publisher import FeishuPublisher
 
 
@@ -141,75 +141,53 @@ async def main_async():
     else:
         print("⚠️  Service account not found (no file or GOOGLE_SA_JSON), skipping AI processing\n")
 
-    # Send email
-    to_email = os.environ.get("TO_EMAIL", "rillahai@gmail.com")
-    print(f"📧 Sending email to {to_email}...")
+    publishers_config = config.get("publishers", {})
+    feishu_config = publishers_config.get("feishu", {})
+    bot_config = publishers_config.get("feishu_bot", {})
+    if not feishu_config.get("enabled") or not bot_config.get("enabled"):
+        print("Feishu bot delivery is disabled. Use generate_preview.py for a local preview.")
+        return 1
 
-    # Generate PDF for both email and Feishu
-    email_sender = EmailSender()
-    html_content = email_sender.render_email(categories, category_names, highlights)
+    publisher = FeishuPublisher()
+    if not publisher.is_configured():
+        print("Feishu credentials not configured (FEISHU_APP_ID/SECRET).")
+        return 1
+
+    chat_id_str = bot_config.get("chat_id") or os.environ.get("FEISHU_BOT_CHAT_ID", "")
+    chat_ids = [cid.strip() for cid in chat_id_str.split(",") if cid.strip()]
+    if not chat_ids:
+        print("Feishu delivery has no valid chat IDs (FEISHU_BOT_CHAT_ID).")
+        return 1
+
     date_str = datetime.now().strftime("%Y-%m-%d")
-    pdf_path = None
+    title = feishu_config.get("title_format", "AI Daily Digest - {date}").format(date=date_str)
+    doc_url = None
 
     if WEASYPRINT_AVAILABLE:
+        renderer = EmailSender()
+        html_content = renderer.render_email(categories, category_names, highlights)
         pdf_dir = Path(__file__).parent / "output"
         pdf_dir.mkdir(exist_ok=True)
         pdf_path = str(pdf_dir / f"AI_Daily_Digest_{date_str}.pdf")
-        email_sender.generate_pdf(html_content, pdf_path)
+        if renderer.generate_pdf(html_content, pdf_path):
+            doc_url = await publisher.upload_pdf(pdf_path, title, chat_ids[0])
 
-    # Send email with PDF attachment
-    subject = f"🤖 AI Daily Digest - {datetime.now().strftime('%m/%d')}"
-    email_success = email_sender.send(to_email, subject, html_content, pdf_path)
-
-    if email_success:
-        print("✅ Email sent successfully!")
+    if doc_url:
+        print(f"   PDF available at: {doc_url}")
     else:
-        print("❌ Failed to send email. See SMTP diagnostics above.")
+        print("   Feishu PDF not available; sending the summary card without a PDF link.")
 
-    # Publish to Feishu (independent of email)
-    publishers_config = config.get("publishers", {})
-    feishu_config = publishers_config.get("feishu", {})
+    print(f"\n🤖 Pushing to {len(chat_ids)} Feishu Bot Group(s)...")
+    sent = 0
+    for cid in chat_ids:
+        if await publisher.send_digest_card(cid, title, highlights, categories, category_names, doc_url):
+            sent += 1
 
-    if feishu_config.get("enabled", False):
-        print("\n🚀 Publishing to Feishu...")
-        publisher = FeishuPublisher()
-        if publisher.is_configured():
-            title = feishu_config.get("title_format", "AI Daily Digest - {date}").format(date=date_str)
+    print("\n🧹 Checking for old documents to clean up...")
+    await publisher.cleanup_old_documents()
 
-            # Publish to Feishu Bot (Push)
-            bot_config = publishers_config.get("feishu_bot", {})
-            if bot_config.get("enabled", False):
-                chat_id_str = bot_config.get("chat_id") or os.environ.get("FEISHU_BOT_CHAT_ID")
-                if chat_id_str:
-                    chat_ids = [cid.strip() for cid in chat_id_str.split(',') if cid.strip()]
-
-                    if chat_ids:
-                        first_chat_id = chat_ids[0]
-                        doc_url = None
-
-                        # Upload PDF to Feishu (same content as email)
-                        if pdf_path and Path(pdf_path).exists():
-                            doc_url = await publisher.upload_pdf(pdf_path, title, first_chat_id)
-                            if doc_url:
-                                print(f"   PDF available at: {doc_url}")
-                        else:
-                            print("   ⚠️ PDF not available, skipping Feishu upload")
-
-                        print(f"\n🤖 Pushing to {len(chat_ids)} Feishu Bot Group(s)...")
-                        for cid in chat_ids:
-                            await publisher.send_digest_card(cid, title, highlights, categories, category_names, doc_url)
-
-                        # Cleanup old documents (older than 180 days)
-                        print("\n🧹 Checking for old documents to clean up...")
-                        await publisher.cleanup_old_documents()
-                    else:
-                        print("   ⚠️ Feishu bot enabled but no valid chat IDs found")
-                else:
-                    print("   ⚠️ Feishu bot enabled but FEISHU_BOT_CHAT_ID not set")
-        else:
-            print("   ⚠️ Feishu publisher enabled but credentials not found (FEISHU_APP_ID/SECRET)")
-
-    if not email_success:
+    if sent != len(chat_ids):
+        print(f"Feishu delivered to {sent}/{len(chat_ids)} groups.")
         return 1
 
     print("\n✅ Daily digest completed!")

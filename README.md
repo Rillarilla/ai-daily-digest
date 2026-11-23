@@ -1,6 +1,6 @@
 # AI Daily Digest
 
-每天自动收集 AI 行业资讯，通过 Google Gemini 智能摘要，发送精美邮件简报。
+每天自动收集 AI 行业资讯，通过 Google Gemini 生成摘要，并向飞书群推送日报和 PDF 链接。
 
 ## 功能特性
 
@@ -40,30 +40,28 @@ sudo apt-get install fonts-noto-cjk fonts-wqy-zenhei
 ### 2. 配置环境变量
 
 ```bash
-# Gemini API (用于智能摘要)
-export GEMINI_API_KEY="your-gemini-api-key"
+# Vertex AI 服务账号 JSON（用于智能摘要）
+export GOOGLE_SA_JSON='{"type":"service_account", ...}'
 
-# Gmail SMTP (用于发送邮件)
-export SMTP_PORT=465
-export SMTP_USER="your-email@gmail.com"
-export SMTP_PASSWORD="your-app-password"  # 需要使用 App Password
-export TO_EMAIL="XXXXXXX@gmail.com"
+# 飞书机器人和目标群
+export FEISHU_APP_ID="cli_..."
+export FEISHU_APP_SECRET="your-app-secret"
+export FEISHU_BOT_CHAT_ID="oc_..."
 ```
 
-### 3. 本地测试
+### 3. 本地预览（不推送）
 
 ```bash
-python main.py
+python generate_preview.py
 ```
 
 ### 4. 部署到 GitHub Actions
 
 1. Fork 或 push 代码到 GitHub
 2. 在 Settings → Secrets and variables → Actions 添加 secrets:
-   - `GEMINI_API_KEY`
-   - `SMTP_USER`
-   - `SMTP_PASSWORD`
-3. 启用 Actions，每天北京时间 7:00 自动发送邮件，飞书推送默认关闭。邮件失败时，Actions 会标记本次运行失败。
+   - `GOOGLE_SA_JSON`（智能摘要）
+   - `FEISHU_APP_ID`、`FEISHU_APP_SECRET`、`FEISHU_BOT_CHAT_ID`（飞书推送）
+3. 启用 Actions，每天北京时间 7:00 定时触发飞书推送。工作流不发送邮件，也不需要 SMTP 凭据。
 
 ## 配置数据源
 
@@ -93,14 +91,6 @@ output:
     your_new_category: "🆕 新分类"
 ```
 
-## Gmail 配置说明
-
-1. 开启两步验证: Google 账户 → 安全性 → 两步验证
-2. 生成应用专用密码:
-   - Google 账户 → 安全性 → 应用专用密码
-   - 选择"邮件"和设备，生成 16 位密码
-3. 使用生成的密码作为 `SMTP_PASSWORD`
-
 ## 项目结构
 
 ```
@@ -117,15 +107,15 @@ ai-daily-digest/
 │   ├── summarizer.py      # Gemini 摘要
 │   └── deduper.py         # 去重排序
 ├── templates/
-│   └── email.html         # 邮件模板
+│   └── email.html         # 日报模板
 ├── main.py                # 入口
-├── email_sender.py        # 邮件发送
+├── email_sender.py        # 日报模板和 PDF 渲染
 ├── requirements.txt
 └── .github/workflows/
     └── daily-digest.yml   # GitHub Actions
 ```
 
-## 自定义邮件模板
+## 自定义日报模板
 
 编辑 `templates/email.html`，支持 Jinja2 模板语法。
 

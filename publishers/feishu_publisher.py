@@ -617,7 +617,7 @@ class FeishuPublisher:
 
         return deleted_count
 
-    async def _send_message(self, receive_id: str, msg_type: str, content: str):
+    async def _send_message(self, receive_id: str, msg_type: str, content: str) -> bool:
         """Send a message via Feishu IM API."""
         token = await self._get_tenant_access_token()
         url = f"{self.BASE_URL}/im/v1/messages?receive_id_type=chat_id"
@@ -634,10 +634,11 @@ class FeishuPublisher:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload, headers=headers) as response:
                 data = await response.json()
-                if data.get("code") != 0:
-                    print(f"Feishu Send Message Error: {data.get('msg')} (code {data.get('code')})")
-                else:
-                    print(f"✅ Feishu message sent to {receive_id}")
+                if response.status != 200 or data.get("code") != 0:
+                    print(f"Feishu Send Message Error: {data.get('msg')} (HTTP {response.status}, code {data.get('code')})")
+                    return False
+                print(f"✅ Feishu message sent to {receive_id}")
+                return True
 
     def _build_card_content(self, title: str, highlights: str, categories: dict, category_names: dict, doc_url: str = None) -> str:
         """Construct Feishu Interactive Card JSON content.
@@ -713,7 +714,7 @@ class FeishuPublisher:
 
         return json.dumps(card)
 
-    async def send_digest_card(self, chat_id: str, title: str, highlights: str, categories: dict, category_names: dict, doc_url: str = None):
+    async def send_digest_card(self, chat_id: str, title: str, highlights: str, categories: dict, category_names: dict, doc_url: str = None) -> bool:
         """Send the news digest as an interactive card.
 
         Args:
@@ -725,10 +726,10 @@ class FeishuPublisher:
             doc_url: Optional URL to the full document for click-through
         """
         if not self.is_configured():
-             print("Feishu publisher not configured.")
-             return
+            print("Feishu publisher not configured.")
+            return False
 
         print(f"Sending Feishu card to {chat_id}...")
         card_content = self._build_card_content(title, highlights, categories, category_names, doc_url)
-        await self._send_message(chat_id, "interactive", card_content)
+        return await self._send_message(chat_id, "interactive", card_content)
 

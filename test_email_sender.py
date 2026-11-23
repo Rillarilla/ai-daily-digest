@@ -1,4 +1,5 @@
 import io
+import os
 import smtplib
 import unittest
 from contextlib import redirect_stdout
@@ -51,15 +52,25 @@ class EmailSenderTest(unittest.TestCase):
 
 
 class DailyDigestDeliveryTest(unittest.IsolatedAsyncioTestCase):
-    @patch("main.FeishuPublisher")
+    @patch("main.FeishuPublisher", autospec=True)
     @patch("main.EmailSender")
-    @patch("main.WEASYPRINT_AVAILABLE", False)
+    @patch("main.WEASYPRINT_AVAILABLE", True)
     @patch("main.GeminiSummarizer", side_effect=RuntimeError("Disabled during test"))
     @patch("main.process_items", return_value={})
     @patch("main.collect_all_sources", new_callable=AsyncMock, return_value=[object()])
-    async def test_email_result_controls_run_status_without_feishu(self, _, __, ___, sender, feishu):
-        for sent, expected in ((True, 0), (False, 1)):
-            with self.subTest(sent=sent), redirect_stdout(io.StringIO()):
-                sender.return_value.send.return_value = sent
-                self.assertEqual(await main.main_async(), expected)
-        feishu.assert_not_called()
+    async def test_only_feishu_is_used_and_controls_run_status(self, _, __, ___, renderer, feishu):
+        publisher = feishu.return_value
+        publisher.is_configured.return_value = True
+        publisher.upload_pdf.return_value = "https://example.com/digest.pdf"
+        renderer.return_value.generate_pdf.return_value = True
+        with patch.dict(os.environ, {"FEISHU_BOT_CHAT_ID": "oc_test"}), patch("main.Path.mkdir"):
+            for sent, expected in ((True, 0), (False, 1)):
+                with self.subTest(sent=sent), redirect_stdout(io.StringIO()):
+                    publisher.reset_mock()
+                    publisher.send_digest_card.return_value = sent
+                    self.assertEqual(await main.main_async(), expected)
+                    publisher.upload_pdf.assert_awaited_once()
+                    publisher.send_digest_card.assert_awaited_once()
+                    self.assertEqual(publisher.send_digest_card.await_args.args[0], "oc_test")
+                    self.assertEqual(publisher.send_digest_card.await_args.args[-1], "https://example.com/digest.pdf")
+        renderer.return_value.send.assert_not_called()

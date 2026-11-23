@@ -42,13 +42,10 @@ jobs:
           # Gemini (Vertex AI) service account JSON
           GOOGLE_SA_JSON: ${{ secrets.GOOGLE_SA_JSON }}
 
-          # Email configuration (Gmail SMTP)
-          SMTP_SERVER: smtp.gmail.com
-          SMTP_PORT: '465'
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          FROM_EMAIL: ${{ secrets.SMTP_USER }}
-          TO_EMAIL: rillahai@gmail.com
+          # Feishu bot configuration
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_BOT_CHAT_ID: ${{ secrets.FEISHU_BOT_CHAT_ID }}
 
         run: |
           python main.py
